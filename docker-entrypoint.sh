@@ -53,7 +53,18 @@ if [ "${CONTAINER_ROLE}" = "app" ]; then
         php artisan key:generate --force
     fi
 
-    chmod -R 775 storage bootstrap/cache || true
+    # Ensure Laravel writable dirs exist (bind mounts on Windows often lack them / correct ownership).
+    mkdir -p \
+        storage/framework/{cache/data,sessions,views,testing} \
+        storage/app/{public,private} \
+        storage/logs \
+        bootstrap/cache
+
+    # PHP-FPM workers run as www-data; without write access, Laravel's Filesystem::replace()
+    # calls tempnam() which falls back to /tmp and emits:
+    # "tempnam(): file created in the system's temporary directory"
+    chown -R www-data:www-data storage bootstrap/cache || true
+    chmod -R ug+rwx storage bootstrap/cache || true
 
     echo "Waiting for database to accept connections..."
     until php -r "new PDO('pgsql:host=${DB_HOST:-db};port=${DB_PORT:-5432};dbname=${DB_DATABASE:-laravel}', '${DB_USERNAME:-laravel}', '${DB_PASSWORD:-secret}');" 2>/dev/null; do
@@ -63,6 +74,17 @@ if [ "${CONTAINER_ROLE}" = "app" ]; then
     php artisan migrate --force || true
 else
     wait_for_app
+fi
+
+# Always fix writable dirs for app + queue (volume mounts can reset ownership).
+if [ -f artisan ]; then
+    mkdir -p \
+        storage/framework/{cache/data,sessions,views,testing} \
+        storage/app/{public,private} \
+        storage/logs \
+        bootstrap/cache
+    chown -R www-data:www-data storage bootstrap/cache 2>/dev/null || true
+    chmod -R ug+rwx storage bootstrap/cache 2>/dev/null || true
 fi
 
 exec "$@"
