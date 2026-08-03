@@ -71,6 +71,27 @@ class AuthTest extends TestCase
             ->assertJsonValidationErrors(['email']);
     }
 
+    public function test_an_authenticated_user_can_fetch_their_profile(): void
+    {
+        $user = User::factory()->create([
+            'name' => 'Jane Doe',
+            'email' => 'jane@example.com',
+        ]);
+        $token = $user->createToken('auth')->plainTextToken;
+
+        $this->withToken($token)
+            ->getJson('/api/user')
+            ->assertOk()
+            ->assertJsonPath('data.id', $user->id)
+            ->assertJsonPath('data.name', 'Jane Doe')
+            ->assertJsonPath('data.email', 'jane@example.com');
+    }
+
+    public function test_fetching_the_profile_requires_authentication(): void
+    {
+        $this->getJson('/api/user')->assertUnauthorized();
+    }
+
     public function test_an_authenticated_user_can_logout(): void
     {
         $user = User::factory()->create();
