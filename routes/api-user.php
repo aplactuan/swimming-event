@@ -20,6 +20,7 @@ Route::prefix('user')->name('user.')->group(function () {
         ->name('login');
 
     Route::middleware('auth:sanctum')->group(function () {
+        Route::get('/', [AuthController::class, 'show'])->name('show');
         Route::post('logout', [AuthController::class, 'logout'])->name('logout');
     });
 });
