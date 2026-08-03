@@ -1,5 +1,6 @@
 <?php
 
+use App\Http\Controllers\Api\User\AuthController;
 use Illuminate\Support\Facades\Route;
 
 /*
@@ -13,5 +14,12 @@ use Illuminate\Support\Facades\Route;
 */
 
 Route::prefix('user')->name('user.')->group(function () {
-    // e.g. /api/user/...
+    Route::post('register', [AuthController::class, 'register'])->name('register');
+    Route::post('login', [AuthController::class, 'login'])
+        ->middleware('throttle:5,1')
+        ->name('login');
+
+    Route::middleware('auth:sanctum')->group(function () {
+        Route::post('logout', [AuthController::class, 'logout'])->name('logout');
+    });
 });
