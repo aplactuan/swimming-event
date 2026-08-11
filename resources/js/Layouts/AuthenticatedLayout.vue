@@ -49,9 +49,7 @@ type NavItem = {
     label: string;
     routeName: string;
     href: string;
-    icon: 'grid' | 'calendar' | 'users' | 'layers' | 'chart' | 'user';
-    badge?: number;
-    preview?: boolean;
+    icon: 'grid' | 'user';
 };
 
 const navigation: NavItem[] = [
@@ -62,35 +60,6 @@ const navigation: NavItem[] = [
         icon: 'grid',
     },
     {
-        label: 'Events',
-        routeName: 'dashboard',
-        href: route('dashboard'),
-        icon: 'calendar',
-        badge: 3,
-        preview: true,
-    },
-    {
-        label: 'Athletes',
-        routeName: 'dashboard',
-        href: route('dashboard'),
-        icon: 'users',
-        preview: true,
-    },
-    {
-        label: 'Heats',
-        routeName: 'dashboard',
-        href: route('dashboard'),
-        icon: 'layers',
-        preview: true,
-    },
-    {
-        label: 'Results',
-        routeName: 'dashboard',
-        href: route('dashboard'),
-        icon: 'chart',
-        preview: true,
-    },
-    {
         label: 'Profile',
         routeName: 'profile.edit',
         href: route('profile.edit'),
@@ -98,13 +67,7 @@ const navigation: NavItem[] = [
     },
 ];
 
-const isActive = (item: NavItem) => {
-    if (item.preview) {
-        return false;
-    }
-
-    return route().current(item.routeName);
-};
+const isActive = (item: NavItem) => route().current(item.routeName);
 </script>
 
 <template>
@@ -147,59 +110,6 @@ const isActive = (item: NavItem) => {
                                     />
                                 </svg>
                                 <svg
-                                    v-else-if="item.icon === 'calendar'"
-                                    viewBox="0 0 24 24"
-                                    fill="none"
-                                    class="h-5 w-5"
-                                >
-                                    <path
-                                        d="M7 3v3M17 3v3M4 8h16M6 5h12a2 2 0 0 1 2 2v12a2 2 0 0 1-2 2H6a2 2 0 0 1-2-2V7a2 2 0 0 1 2-2Z"
-                                        stroke="currentColor"
-                                        stroke-width="1.7"
-                                        stroke-linecap="round"
-                                    />
-                                </svg>
-                                <svg
-                                    v-else-if="item.icon === 'users'"
-                                    viewBox="0 0 24 24"
-                                    fill="none"
-                                    class="h-5 w-5"
-                                >
-                                    <path
-                                        d="M16 19v-1a4 4 0 0 0-4-4H7a4 4 0 0 0-4 4v1M14 7a3 3 0 1 1-6 0 3 3 0 0 1 6 0Zm7 12v-1a3.5 3.5 0 0 0-2.5-3.35M16.5 4.1a3 3 0 0 1 0 5.8"
-                                        stroke="currentColor"
-                                        stroke-width="1.7"
-                                        stroke-linecap="round"
-                                    />
-                                </svg>
-                                <svg
-                                    v-else-if="item.icon === 'layers'"
-                                    viewBox="0 0 24 24"
-                                    fill="none"
-                                    class="h-5 w-5"
-                                >
-                                    <path
-                                        d="m12 3 9 5-9 5-9-5 9-5Zm-9 9 9 5 9-5M3 17l9 5 9-5"
-                                        stroke="currentColor"
-                                        stroke-width="1.7"
-                                        stroke-linecap="round"
-                                        stroke-linejoin="round"
-                                    />
-                                </svg>
-                                <svg
-                                    v-else-if="item.icon === 'chart'"
-                                    viewBox="0 0 24 24"
-                                    fill="none"
-                                    class="h-5 w-5"
-                                >
-                                    <path
-                                        d="M4 19V5M4 19h16M8 17V9m5 8V7m5 10v-4"
-                                        stroke="currentColor"
-                                        stroke-width="1.7"
-                                        stroke-linecap="round"
-                                    />
-                                </svg>
-                                <svg
                                     v-else
                                     viewBox="0 0 24 24"
                                     fill="none"
@@ -214,36 +124,8 @@ const isActive = (item: NavItem) => {
                             </span>
                             {{ item.label }}
                         </span>
-
-                        <span
-                            v-if="item.badge"
-                            class="inline-flex h-5 min-w-[1.25rem] items-center justify-center rounded-full bg-gold px-1.5 text-[11px] font-bold text-navy"
-                        >
-                            {{ item.badge }}
-                        </span>
                     </Link>
                 </nav>
-
-                <div
-                    class="mt-8 rounded-2xl border border-white/10 bg-navy-soft p-4"
-                >
-                    <div class="sm-label text-white/50">Pool Status</div>
-                    <div class="mt-2 font-serif text-lg font-semibold">
-                        Lane 1–8 open
-                    </div>
-                    <div class="mt-4 flex gap-1.5">
-                        <span
-                            v-for="lane in 8"
-                            :key="lane"
-                            class="h-2.5 flex-1 rounded-full"
-                            :class="
-                                lane <= 6
-                                    ? 'bg-gold'
-                                    : 'bg-white/15'
-                            "
-                        />
-                    </div>
-                </div>
             </aside>
 
             <div class="flex min-w-0 flex-1 flex-col">
