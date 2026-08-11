@@ -4,6 +4,7 @@ namespace App\Models;
 
 use Database\Factories\CompetitionFactory;
 use Illuminate\Database\Eloquent\Attributes\Fillable;
+use Illuminate\Database\Eloquent\Builder;
 use Illuminate\Database\Eloquent\Concerns\HasUuids;
 use Illuminate\Database\Eloquent\Factories\HasFactory;
 use Illuminate\Database\Eloquent\Model;
@@ -21,6 +22,17 @@ class Competition extends Model
 {
     /** @use HasFactory<CompetitionFactory> */
     use HasFactory, HasUuids;
+
+    /**
+     * Scope a query to upcoming competitions, soonest first.
+     */
+    public function scopeUpcoming(Builder $query): Builder
+    {
+        return $query
+            ->whereDate('competition_date', '>=', now()->toDateString())
+            ->orderBy('competition_date')
+            ->orderBy('name');
+    }
 
     /**
      * Get the attributes that should be cast.
