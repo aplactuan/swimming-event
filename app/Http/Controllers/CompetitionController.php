@@ -17,6 +17,11 @@ class CompetitionController extends Controller
      */
     public function show(Competition $competition): Response
     {
+        $competition->load([
+            'rootClassifications.ageBrackets',
+            'rootClassifications.children.ageBrackets',
+        ]);
+
         return Inertia::render('Competitions/Show', [
             'competition' => (new CompetitionResource($competition))->resolve(),
         ]);

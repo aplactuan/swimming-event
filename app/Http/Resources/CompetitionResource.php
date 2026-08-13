@@ -2,11 +2,12 @@
 
 namespace App\Http\Resources;
 
+use App\Models\Competition;
 use Illuminate\Http\Request;
 use Illuminate\Http\Resources\Json\JsonResource;
 
 /**
- * @mixin \App\Models\Competition
+ * @mixin Competition
  */
 class CompetitionResource extends JsonResource
 {
@@ -26,6 +27,10 @@ class CompetitionResource extends JsonResource
             'coaches_meeting_time' => $this->formatTime($this->coaches_meeting_time),
             'registration_deadline' => $this->registration_deadline->toDateString(),
             'entry_fee' => $this->entry_fee,
+            'classifications' => $this->whenLoaded(
+                'rootClassifications',
+                fn () => ClassificationResource::collection($this->rootClassifications)->resolve(),
+            ),
         ];
     }
 
