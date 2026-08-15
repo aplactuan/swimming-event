@@ -50,7 +50,8 @@ class CompetitionShowTest extends TestCase
                 ->where('competition.coaches_meeting_time', '08:00')
                 ->where('competition.registration_deadline', '2026-09-01')
                 ->where('competition.entry_fee', 2500)
-                ->has('competition.classifications', 0));
+                ->has('competition.classifications', 0)
+                ->has('competition.events', 0));
     }
 
     public function test_viewing_a_missing_competition_returns_not_found(): void

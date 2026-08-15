@@ -31,6 +31,10 @@ class CompetitionResource extends JsonResource
                 'rootClassifications',
                 fn () => ClassificationResource::collection($this->rootClassifications)->resolve(),
             ),
+            'events' => $this->whenLoaded(
+                'events',
+                fn () => EventResource::collection($this->events)->resolve(),
+            ),
         ];
     }
 

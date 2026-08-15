@@ -4,6 +4,7 @@ use App\Http\Controllers\AgeBracketController;
 use App\Http\Controllers\ClassificationController;
 use App\Http\Controllers\CompetitionController;
 use App\Http\Controllers\DashboardController;
+use App\Http\Controllers\EventController;
 use App\Http\Controllers\ProfileController;
 use Illuminate\Support\Facades\Route;
 
@@ -29,6 +30,13 @@ Route::middleware(['auth', 'verified'])->group(function () {
             ->name('age-brackets.update');
         Route::delete('/competitions/{competition}/classifications/{classification}/age-brackets/{age_bracket}', [AgeBracketController::class, 'destroy'])
             ->name('age-brackets.destroy');
+
+        Route::post('/competitions/{competition}/events', [EventController::class, 'store'])
+            ->name('events.store');
+        Route::put('/competitions/{competition}/events/{event}', [EventController::class, 'update'])
+            ->name('events.update');
+        Route::delete('/competitions/{competition}/events/{event}', [EventController::class, 'destroy'])
+            ->name('events.destroy');
     });
 });
 

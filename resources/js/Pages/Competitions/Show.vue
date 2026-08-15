@@ -4,9 +4,17 @@ import AgeBracketFormModal from '@/Pages/Competitions/Partials/AgeBracketFormMod
 import ClassificationFormModal from '@/Pages/Competitions/Partials/ClassificationFormModal.vue';
 import DeleteAgeBracketModal from '@/Pages/Competitions/Partials/DeleteAgeBracketModal.vue';
 import DeleteClassificationModal from '@/Pages/Competitions/Partials/DeleteClassificationModal.vue';
+import DeleteEventModal from '@/Pages/Competitions/Partials/DeleteEventModal.vue';
+import EventFormModal from '@/Pages/Competitions/Partials/EventFormModal.vue';
 import CompetitionFormModal from '@/Pages/Dashboard/Partials/CompetitionFormModal.vue';
 import DeleteCompetitionModal from '@/Pages/Dashboard/Partials/DeleteCompetitionModal.vue';
-import type { AgeBracket, Classification, Competition } from '@/types';
+import type {
+    AgeBracket,
+    Classification,
+    Competition,
+    CompetitionEvent,
+    EventGender,
+} from '@/types';
 import { Head, Link } from '@inertiajs/vue3';
 import { computed, ref } from 'vue';
 
@@ -32,8 +40,11 @@ const ageBracketFormModal = ref<{
 const deleteAgeBracketModal = ref<{
     open: (classification: Classification, ageBracket: AgeBracket) => void;
 } | null>(null);
+const eventFormModal = ref<{ open: (event?: CompetitionEvent) => void } | null>(null);
+const deleteEventModal = ref<{ open: (event: CompetitionEvent) => void } | null>(null);
 
 const classifications = computed(() => props.competition.classifications ?? []);
+const events = computed(() => props.competition.events ?? []);
 
 const openEditCompetitionModal = () => {
     competitionFormModal.value?.open(props.competition);
@@ -91,6 +102,28 @@ const formatAgeBracketRange = (bracket: AgeBracket) => {
 
     return 'No birthday range';
 };
+
+const formatGender = (gender: EventGender) => {
+    if (gender === 'male') {
+        return 'Male';
+    }
+
+    if (gender === 'female') {
+        return 'Female';
+    }
+
+    return 'Mixed';
+};
+
+const formatEligibilitySummary = (event: CompetitionEvent) =>
+    event.eligibilities
+        .map((row) => {
+            const classification = row.classification?.name ?? 'Unknown class';
+            const bracket = row.age_bracket?.name ?? 'Unknown bracket';
+
+            return `${classification} · ${bracket}`;
+        })
+        .join(', ');
 </script>
 
 <template>
@@ -384,6 +417,73 @@ const formatAgeBracketRange = (bracket: AgeBracket) => {
                     </li>
                 </ul>
             </div>
+
+            <div class="sm-card">
+                <div class="flex flex-col gap-4 sm:flex-row sm:items-end sm:justify-between">
+                    <div>
+                        <div class="sm-label">Program</div>
+                        <h3 class="mt-1 font-serif text-xl font-bold text-ink">
+                            Events
+                        </h3>
+                        <p class="mt-1 text-sm text-ink-muted">
+                            Define swim events and which classification + age
+                            bracket pairs may enter.
+                        </p>
+                    </div>
+                    <button
+                        type="button"
+                        class="sm-btn-secondary"
+                        @click="eventFormModal?.open()"
+                    >
+                        Add event
+                    </button>
+                </div>
+
+                <div
+                    v-if="events.length === 0"
+                    class="mt-6 rounded-xl bg-surface px-4 py-6 text-sm text-ink-muted"
+                >
+                    No events yet.
+                </div>
+
+                <ul v-else class="mt-6 space-y-3">
+                    <li
+                        v-for="event in events"
+                        :key="event.id"
+                        class="rounded-xl border border-surface-muted bg-white p-4"
+                    >
+                        <div class="flex flex-col gap-3 sm:flex-row sm:items-start sm:justify-between">
+                            <div>
+                                <h4 class="font-semibold text-ink">
+                                    {{ event.name }}
+                                </h4>
+                                <p class="mt-1 text-sm text-ink-muted">
+                                    {{ formatGender(event.gender) }}
+                                </p>
+                                <p class="mt-2 text-sm text-ink">
+                                    {{ formatEligibilitySummary(event) }}
+                                </p>
+                            </div>
+                            <div class="flex flex-wrap gap-2">
+                                <button
+                                    type="button"
+                                    class="text-sm font-semibold text-ink-muted hover:text-ink"
+                                    @click="eventFormModal?.open(event)"
+                                >
+                                    Edit
+                                </button>
+                                <button
+                                    type="button"
+                                    class="text-sm font-semibold text-red-700 hover:text-red-800"
+                                    @click="deleteEventModal?.open(event)"
+                                >
+                                    Delete
+                                </button>
+                            </div>
+                        </div>
+                    </li>
+                </ul>
+            </div>
         </div>
 
         <CompetitionFormModal ref="competitionFormModal" />
@@ -404,5 +504,7 @@ const formatAgeBracketRange = (bracket: AgeBracket) => {
             ref="deleteAgeBracketModal"
             :competition="competition"
         />
+        <EventFormModal ref="eventFormModal" :competition="competition" />
+        <DeleteEventModal ref="deleteEventModal" :competition="competition" />
     </AuthenticatedLayout>
 </template>
