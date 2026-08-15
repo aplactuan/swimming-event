@@ -20,6 +20,8 @@ class CompetitionController extends Controller
         $competition->load([
             'rootClassifications.ageBrackets',
             'rootClassifications.children.ageBrackets',
+            'events.eligibilities.classification',
+            'events.eligibilities.ageBracket',
         ]);
 
         return Inertia::render('Competitions/Show', [

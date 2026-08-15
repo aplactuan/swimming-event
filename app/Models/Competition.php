@@ -43,6 +43,14 @@ class Competition extends Model
     }
 
     /**
+     * Get the events for the competition.
+     */
+    public function events(): HasMany
+    {
+        return $this->hasMany(Event::class)->orderBy('sort_order');
+    }
+
+    /**
      * Scope a query to upcoming competitions, soonest first.
      */
     public function scopeUpcoming(Builder $query): Builder
