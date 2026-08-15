@@ -35,6 +35,10 @@ class CompetitionResource extends JsonResource
                 'events',
                 fn () => EventResource::collection($this->events)->resolve(),
             ),
+            'participants' => $this->whenLoaded(
+                'participants',
+                fn () => ParticipantResource::collection($this->participants)->resolve(),
+            ),
         ];
     }
 

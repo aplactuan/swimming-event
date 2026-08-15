@@ -22,6 +22,8 @@ class CompetitionController extends Controller
             'rootClassifications.children.ageBrackets',
             'events.eligibilities.classification',
             'events.eligibilities.ageBracket',
+            'events.participants.classification',
+            'participants.classification',
         ]);
 
         return Inertia::render('Competitions/Show', [

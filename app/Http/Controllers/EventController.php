@@ -4,13 +4,40 @@ namespace App\Http\Controllers;
 
 use App\Http\Requests\StoreEventRequest;
 use App\Http\Requests\UpdateEventRequest;
+use App\Http\Resources\EventResource;
+use App\Http\Resources\ParticipantResource;
 use App\Models\Competition;
 use App\Models\Event;
 use Illuminate\Http\RedirectResponse;
 use Illuminate\Support\Facades\DB;
+use Inertia\Inertia;
+use Inertia\Response;
 
 class EventController extends Controller
 {
+    /**
+     * Display the specified event.
+     */
+    public function show(Competition $competition, Event $event): Response
+    {
+        $event->load([
+            'eligibilities.classification',
+            'eligibilities.ageBracket',
+            'participants.classification',
+        ]);
+
+        $competition->load(['participants.classification']);
+
+        return Inertia::render('Events/Show', [
+            'competition' => [
+                'id' => $competition->id,
+                'name' => $competition->name,
+                'participants' => ParticipantResource::collection($competition->participants)->resolve(),
+            ],
+            'event' => (new EventResource($event))->resolve(),
+        ]);
+    }
+
     /**
      * Store a newly created event.
      */

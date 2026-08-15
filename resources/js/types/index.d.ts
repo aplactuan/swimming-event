@@ -25,6 +25,8 @@ export interface Classification {
 
 export type EventGender = 'male' | 'female' | 'mixed';
 
+export type ParticipantGender = 'male' | 'female';
+
 export interface EventEligibility {
     id: string;
     classification_id: string;
@@ -41,12 +43,34 @@ export interface EventEligibility {
     };
 }
 
+export interface Participant {
+    id: string;
+    first_name: string;
+    last_name: string;
+    gender: ParticipantGender;
+    team: string;
+    birthdate: string;
+    classification_id: string;
+    paid: boolean;
+    classification?: {
+        id: string;
+        name: string;
+    };
+}
+
 export interface CompetitionEvent {
     id: string;
     name: string;
     gender: EventGender;
     sort_order: number;
     eligibilities: EventEligibility[];
+    participants?: Participant[];
+}
+
+export interface EventShowCompetition {
+    id: string;
+    name: string;
+    participants: Participant[];
 }
 
 export interface Competition {
@@ -60,6 +84,7 @@ export interface Competition {
     entry_fee: number;
     classifications?: Classification[];
     events?: CompetitionEvent[];
+    participants?: Participant[];
 }
 
 export type PageProps<

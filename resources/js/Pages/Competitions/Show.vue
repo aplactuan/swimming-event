@@ -5,7 +5,9 @@ import ClassificationFormModal from '@/Pages/Competitions/Partials/Classificatio
 import DeleteAgeBracketModal from '@/Pages/Competitions/Partials/DeleteAgeBracketModal.vue';
 import DeleteClassificationModal from '@/Pages/Competitions/Partials/DeleteClassificationModal.vue';
 import DeleteEventModal from '@/Pages/Competitions/Partials/DeleteEventModal.vue';
+import DeleteParticipantModal from '@/Pages/Competitions/Partials/DeleteParticipantModal.vue';
 import EventFormModal from '@/Pages/Competitions/Partials/EventFormModal.vue';
+import ParticipantFormModal from '@/Pages/Competitions/Partials/ParticipantFormModal.vue';
 import CompetitionFormModal from '@/Pages/Dashboard/Partials/CompetitionFormModal.vue';
 import DeleteCompetitionModal from '@/Pages/Dashboard/Partials/DeleteCompetitionModal.vue';
 import type {
@@ -14,6 +16,8 @@ import type {
     Competition,
     CompetitionEvent,
     EventGender,
+    Participant,
+    ParticipantGender,
 } from '@/types';
 import { Head, Link } from '@inertiajs/vue3';
 import { computed, ref } from 'vue';
@@ -42,9 +46,12 @@ const deleteAgeBracketModal = ref<{
 } | null>(null);
 const eventFormModal = ref<{ open: (event?: CompetitionEvent) => void } | null>(null);
 const deleteEventModal = ref<{ open: (event: CompetitionEvent) => void } | null>(null);
+const participantFormModal = ref<{ open: (participant?: Participant) => void } | null>(null);
+const deleteParticipantModal = ref<{ open: (participant: Participant) => void } | null>(null);
 
 const classifications = computed(() => props.competition.classifications ?? []);
 const events = computed(() => props.competition.events ?? []);
+const participants = computed(() => props.competition.participants ?? []);
 
 const openEditCompetitionModal = () => {
     competitionFormModal.value?.open(props.competition);
@@ -103,7 +110,7 @@ const formatAgeBracketRange = (bracket: AgeBracket) => {
     return 'No birthday range';
 };
 
-const formatGender = (gender: EventGender) => {
+const formatGender = (gender: EventGender | ParticipantGender) => {
     if (gender === 'male') {
         return 'Male';
     }
@@ -124,6 +131,9 @@ const formatEligibilitySummary = (event: CompetitionEvent) =>
             return `${classification} · ${bracket}`;
         })
         .join(', ');
+
+const formatParticipantName = (participant: Participant) =>
+    `${participant.last_name}, ${participant.first_name}`;
 </script>
 
 <template>
@@ -421,6 +431,73 @@ const formatEligibilitySummary = (event: CompetitionEvent) =>
             <div class="sm-card">
                 <div class="flex flex-col gap-4 sm:flex-row sm:items-end sm:justify-between">
                     <div>
+                        <div class="sm-label">Entries</div>
+                        <h3 class="mt-1 font-serif text-xl font-bold text-ink">
+                            Participants
+                        </h3>
+                        <p class="mt-1 text-sm text-ink-muted">
+                            Register swimmers. Marking paid auto-enters matching events.
+                        </p>
+                    </div>
+                    <button
+                        type="button"
+                        class="sm-btn-secondary"
+                        @click="participantFormModal?.open()"
+                    >
+                        Add participant
+                    </button>
+                </div>
+
+                <div
+                    v-if="participants.length === 0"
+                    class="mt-6 rounded-xl bg-surface px-4 py-6 text-sm text-ink-muted"
+                >
+                    No participants yet.
+                </div>
+
+                <ul v-else class="mt-6 space-y-3">
+                    <li
+                        v-for="participant in participants"
+                        :key="participant.id"
+                        class="rounded-xl border border-surface-muted bg-white p-4"
+                    >
+                        <div class="flex flex-col gap-3 sm:flex-row sm:items-start sm:justify-between">
+                            <div>
+                                <h4 class="font-semibold text-ink">
+                                    {{ formatParticipantName(participant) }}
+                                </h4>
+                                <p class="mt-1 text-sm text-ink-muted">
+                                    {{ formatGender(participant.gender) }}
+                                    · {{ participant.team }}
+                                    · {{ formatShortDate(participant.birthdate) }}
+                                    · {{ participant.classification?.name ?? 'Unknown class' }}
+                                    · {{ participant.paid ? 'Paid' : 'Unpaid' }}
+                                </p>
+                            </div>
+                            <div class="flex flex-wrap gap-2">
+                                <button
+                                    type="button"
+                                    class="text-sm font-semibold text-ink-muted hover:text-ink"
+                                    @click="participantFormModal?.open(participant)"
+                                >
+                                    Edit
+                                </button>
+                                <button
+                                    type="button"
+                                    class="text-sm font-semibold text-red-700 hover:text-red-800"
+                                    @click="deleteParticipantModal?.open(participant)"
+                                >
+                                    Delete
+                                </button>
+                            </div>
+                        </div>
+                    </li>
+                </ul>
+            </div>
+
+            <div class="sm-card">
+                <div class="flex flex-col gap-4 sm:flex-row sm:items-end sm:justify-between">
+                    <div>
                         <div class="sm-label">Program</div>
                         <h3 class="mt-1 font-serif text-xl font-bold text-ink">
                             Events
@@ -455,16 +532,43 @@ const formatEligibilitySummary = (event: CompetitionEvent) =>
                         <div class="flex flex-col gap-3 sm:flex-row sm:items-start sm:justify-between">
                             <div>
                                 <h4 class="font-semibold text-ink">
-                                    {{ event.name }}
+                                    <Link
+                                        :href="
+                                            route('events.show', {
+                                                competition: competition.id,
+                                                event: event.id,
+                                            })
+                                        "
+                                        class="hover:underline"
+                                    >
+                                        {{ event.name }}
+                                    </Link>
                                 </h4>
                                 <p class="mt-1 text-sm text-ink-muted">
                                     {{ formatGender(event.gender) }}
+                                    · {{ (event.participants ?? []).length }}
+                                    {{
+                                        (event.participants ?? []).length === 1
+                                            ? 'participant'
+                                            : 'participants'
+                                    }}
                                 </p>
                                 <p class="mt-2 text-sm text-ink">
                                     {{ formatEligibilitySummary(event) }}
                                 </p>
                             </div>
                             <div class="flex flex-wrap gap-2">
+                                <Link
+                                    :href="
+                                        route('events.show', {
+                                            competition: competition.id,
+                                            event: event.id,
+                                        })
+                                    "
+                                    class="text-sm font-semibold text-ink-muted hover:text-ink"
+                                >
+                                    View
+                                </Link>
                                 <button
                                     type="button"
                                     class="text-sm font-semibold text-ink-muted hover:text-ink"
@@ -502,6 +606,14 @@ const formatEligibilitySummary = (event: CompetitionEvent) =>
         />
         <DeleteAgeBracketModal
             ref="deleteAgeBracketModal"
+            :competition="competition"
+        />
+        <ParticipantFormModal
+            ref="participantFormModal"
+            :competition="competition"
+        />
+        <DeleteParticipantModal
+            ref="deleteParticipantModal"
             :competition="competition"
         />
         <EventFormModal ref="eventFormModal" :competition="competition" />

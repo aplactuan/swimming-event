@@ -5,6 +5,8 @@ use App\Http\Controllers\ClassificationController;
 use App\Http\Controllers\CompetitionController;
 use App\Http\Controllers\DashboardController;
 use App\Http\Controllers\EventController;
+use App\Http\Controllers\EventParticipantController;
+use App\Http\Controllers\ParticipantController;
 use App\Http\Controllers\ProfileController;
 use Illuminate\Support\Facades\Route;
 
@@ -33,10 +35,24 @@ Route::middleware(['auth', 'verified'])->group(function () {
 
         Route::post('/competitions/{competition}/events', [EventController::class, 'store'])
             ->name('events.store');
+        Route::get('/competitions/{competition}/events/{event}', [EventController::class, 'show'])
+            ->name('events.show');
         Route::put('/competitions/{competition}/events/{event}', [EventController::class, 'update'])
             ->name('events.update');
         Route::delete('/competitions/{competition}/events/{event}', [EventController::class, 'destroy'])
             ->name('events.destroy');
+
+        Route::post('/competitions/{competition}/participants', [ParticipantController::class, 'store'])
+            ->name('participants.store');
+        Route::put('/competitions/{competition}/participants/{participant}', [ParticipantController::class, 'update'])
+            ->name('participants.update');
+        Route::delete('/competitions/{competition}/participants/{participant}', [ParticipantController::class, 'destroy'])
+            ->name('participants.destroy');
+
+        Route::post('/competitions/{competition}/events/{event}/participants', [EventParticipantController::class, 'store'])
+            ->name('event-participants.store');
+        Route::delete('/competitions/{competition}/events/{event}/participants/{participant}', [EventParticipantController::class, 'destroy'])
+            ->name('event-participants.destroy');
     });
 });
 
