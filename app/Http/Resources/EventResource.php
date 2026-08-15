@@ -27,6 +27,10 @@ class EventResource extends JsonResource
                 'eligibilities',
                 fn () => EventEligibilityResource::collection($this->eligibilities)->resolve(),
             ),
+            'participants' => $this->whenLoaded(
+                'participants',
+                fn () => ParticipantResource::collection($this->participants)->resolve(),
+            ),
         ];
     }
 }

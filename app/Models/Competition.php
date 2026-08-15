@@ -51,6 +51,16 @@ class Competition extends Model
     }
 
     /**
+     * Get the participants for the competition.
+     */
+    public function participants(): HasMany
+    {
+        return $this->hasMany(Participant::class)
+            ->orderBy('last_name')
+            ->orderBy('first_name');
+    }
+
+    /**
      * Scope a query to upcoming competitions, soonest first.
      */
     public function scopeUpcoming(Builder $query): Builder

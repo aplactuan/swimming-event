@@ -9,6 +9,7 @@ use Illuminate\Database\Eloquent\Concerns\HasUuids;
 use Illuminate\Database\Eloquent\Factories\HasFactory;
 use Illuminate\Database\Eloquent\Model;
 use Illuminate\Database\Eloquent\Relations\BelongsTo;
+use Illuminate\Database\Eloquent\Relations\BelongsToMany;
 use Illuminate\Database\Eloquent\Relations\HasMany;
 
 #[Fillable([
@@ -60,6 +61,17 @@ class Event extends Model
     public function eligibilities(): HasMany
     {
         return $this->hasMany(EventEligibility::class);
+    }
+
+    /**
+     * Get the participants entered in the event.
+     */
+    public function participants(): BelongsToMany
+    {
+        return $this->belongsToMany(Participant::class)
+            ->orderBy('last_name')
+            ->orderBy('first_name')
+            ->withTimestamps();
     }
 
     /**
