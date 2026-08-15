@@ -14,12 +14,19 @@ return new class extends Migration
         Schema::create('classifications', function (Blueprint $table) {
             $table->uuid('id')->primary();
             $table->foreignUuid('competition_id')->constrained()->cascadeOnDelete();
-            $table->foreignUuid('parent_id')->nullable()->constrained('classifications')->cascadeOnDelete();
+            $table->uuid('parent_id')->nullable();
             $table->string('name');
             $table->unsignedInteger('sort_order')->default(0);
             $table->timestamps();
 
             $table->index(['competition_id', 'parent_id', 'sort_order']);
+        });
+
+        Schema::table('classifications', function (Blueprint $table) {
+            $table->foreign('parent_id')
+                ->references('id')
+                ->on('classifications')
+                ->cascadeOnDelete();
         });
     }
 
