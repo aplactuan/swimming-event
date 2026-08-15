@@ -1,10 +1,14 @@
 <script setup lang="ts">
 import AuthenticatedLayout from '@/Layouts/AuthenticatedLayout.vue';
+import AgeBracketFormModal from '@/Pages/Competitions/Partials/AgeBracketFormModal.vue';
+import ClassificationFormModal from '@/Pages/Competitions/Partials/ClassificationFormModal.vue';
+import DeleteAgeBracketModal from '@/Pages/Competitions/Partials/DeleteAgeBracketModal.vue';
+import DeleteClassificationModal from '@/Pages/Competitions/Partials/DeleteClassificationModal.vue';
 import CompetitionFormModal from '@/Pages/Dashboard/Partials/CompetitionFormModal.vue';
 import DeleteCompetitionModal from '@/Pages/Dashboard/Partials/DeleteCompetitionModal.vue';
-import type { Competition } from '@/types';
+import type { AgeBracket, Classification, Competition } from '@/types';
 import { Head, Link } from '@inertiajs/vue3';
-import { ref } from 'vue';
+import { computed, ref } from 'vue';
 
 const props = defineProps<{
     competition: Competition;
@@ -16,6 +20,20 @@ const competitionFormModal = ref<{ open: (competition?: Competition) => void } |
 const deleteCompetitionModal = ref<{ open: (competition: Competition) => void } | null>(
     null,
 );
+const classificationFormModal = ref<{
+    open: (options?: { classification?: Classification; parent?: Classification }) => void;
+} | null>(null);
+const deleteClassificationModal = ref<{ open: (classification: Classification) => void } | null>(
+    null,
+);
+const ageBracketFormModal = ref<{
+    open: (classification: Classification, ageBracket?: AgeBracket) => void;
+} | null>(null);
+const deleteAgeBracketModal = ref<{
+    open: (classification: Classification, ageBracket: AgeBracket) => void;
+} | null>(null);
+
+const classifications = computed(() => props.competition.classifications ?? []);
 
 const openEditCompetitionModal = () => {
     competitionFormModal.value?.open(props.competition);
@@ -29,6 +47,13 @@ const formatDate = (value: string) =>
     new Intl.DateTimeFormat('en-US', {
         weekday: 'long',
         month: 'long',
+        day: 'numeric',
+        year: 'numeric',
+    }).format(new Date(`${value}T00:00:00`));
+
+const formatShortDate = (value: string) =>
+    new Intl.DateTimeFormat('en-US', {
+        month: 'short',
         day: 'numeric',
         year: 'numeric',
     }).format(new Date(`${value}T00:00:00`));
@@ -50,6 +75,22 @@ const formatTime = (value: string | null) => {
 
 const formatEntryFee = (value: number) =>
     new Intl.NumberFormat('en-US').format(value);
+
+const formatAgeBracketRange = (bracket: AgeBracket) => {
+    if (bracket.start_birthday && bracket.end_birthday) {
+        return `${formatShortDate(bracket.start_birthday)} – ${formatShortDate(bracket.end_birthday)}`;
+    }
+
+    if (bracket.start_birthday) {
+        return `On or after ${formatShortDate(bracket.start_birthday)}`;
+    }
+
+    if (bracket.end_birthday) {
+        return `On or before ${formatShortDate(bracket.end_birthday)}`;
+    }
+
+    return 'No birthday range';
+};
 </script>
 
 <template>
@@ -145,9 +186,223 @@ const formatEntryFee = (value: number) =>
                     </div>
                 </dl>
             </div>
+
+            <div class="sm-card">
+                <div class="flex flex-col gap-4 sm:flex-row sm:items-end sm:justify-between">
+                    <div>
+                        <div class="sm-label">Meet structure</div>
+                        <h3 class="mt-1 font-serif text-xl font-bold text-ink">
+                            Classifications
+                        </h3>
+                        <p class="mt-1 text-sm text-ink-muted">
+                            Nest classes up to one level and add age brackets with
+                            birthday cutoffs.
+                        </p>
+                    </div>
+                    <button
+                        type="button"
+                        class="sm-btn-secondary"
+                        @click="classificationFormModal?.open()"
+                    >
+                        Add classification
+                    </button>
+                </div>
+
+                <div v-if="classifications.length === 0" class="mt-6 rounded-xl bg-surface px-4 py-6 text-sm text-ink-muted">
+                    No classifications yet.
+                </div>
+
+                <ul v-else class="mt-6 space-y-4">
+                    <li
+                        v-for="classification in classifications"
+                        :key="classification.id"
+                        class="rounded-xl border border-surface-muted bg-white p-4"
+                    >
+                        <div class="flex flex-col gap-3 sm:flex-row sm:items-start sm:justify-between">
+                            <div>
+                                <h4 class="font-semibold text-ink">
+                                    {{ classification.name }}
+                                </h4>
+                            </div>
+                            <div class="flex flex-wrap gap-2">
+                                <button
+                                    type="button"
+                                    class="text-sm font-semibold text-ink-muted hover:text-ink"
+                                    @click="classificationFormModal?.open({ parent: classification })"
+                                >
+                                    Add class
+                                </button>
+                                <button
+                                    type="button"
+                                    class="text-sm font-semibold text-ink-muted hover:text-ink"
+                                    @click="ageBracketFormModal?.open(classification)"
+                                >
+                                    Add age bracket
+                                </button>
+                                <button
+                                    type="button"
+                                    class="text-sm font-semibold text-ink-muted hover:text-ink"
+                                    @click="classificationFormModal?.open({ classification })"
+                                >
+                                    Edit
+                                </button>
+                                <button
+                                    type="button"
+                                    class="text-sm font-semibold text-red-700 hover:text-red-800"
+                                    @click="deleteClassificationModal?.open(classification)"
+                                >
+                                    Delete
+                                </button>
+                            </div>
+                        </div>
+
+                        <ul
+                            v-if="classification.age_brackets.length > 0"
+                            class="mt-3 space-y-2"
+                        >
+                            <li
+                                v-for="bracket in classification.age_brackets"
+                                :key="bracket.id"
+                                class="flex flex-col gap-2 rounded-lg bg-surface px-3 py-2 sm:flex-row sm:items-center sm:justify-between"
+                            >
+                                <div>
+                                    <div class="text-sm font-medium text-ink">
+                                        {{ bracket.name }}
+                                    </div>
+                                    <div class="text-xs text-ink-muted">
+                                        {{ formatAgeBracketRange(bracket) }}
+                                    </div>
+                                </div>
+                                <div class="flex gap-2">
+                                    <button
+                                        type="button"
+                                        class="text-sm font-semibold text-ink-muted hover:text-ink"
+                                        @click="ageBracketFormModal?.open(classification, bracket)"
+                                    >
+                                        Edit
+                                    </button>
+                                    <button
+                                        type="button"
+                                        class="text-sm font-semibold text-red-700 hover:text-red-800"
+                                        @click="deleteAgeBracketModal?.open(classification, bracket)"
+                                    >
+                                        Delete
+                                    </button>
+                                </div>
+                            </li>
+                        </ul>
+
+                        <ul
+                            v-if="classification.children.length > 0"
+                            class="mt-4 space-y-3 border-l border-surface-muted pl-4"
+                        >
+                            <li
+                                v-for="child in classification.children"
+                                :key="child.id"
+                            >
+                                <div class="flex flex-col gap-3 sm:flex-row sm:items-start sm:justify-between">
+                                    <h5 class="font-medium text-ink">
+                                        {{ child.name }}
+                                    </h5>
+                                    <div class="flex flex-wrap gap-2">
+                                        <button
+                                            type="button"
+                                            class="text-sm font-semibold text-ink-muted hover:text-ink"
+                                            @click="ageBracketFormModal?.open(child)"
+                                        >
+                                            Add age bracket
+                                        </button>
+                                        <button
+                                            type="button"
+                                            class="text-sm font-semibold text-ink-muted hover:text-ink"
+                                            @click="classificationFormModal?.open({ classification: child })"
+                                        >
+                                            Edit
+                                        </button>
+                                        <button
+                                            type="button"
+                                            class="text-sm font-semibold text-red-700 hover:text-red-800"
+                                            @click="deleteClassificationModal?.open(child)"
+                                        >
+                                            Delete
+                                        </button>
+                                    </div>
+                                </div>
+
+                                <ul
+                                    v-if="child.age_brackets.length > 0"
+                                    class="mt-2 space-y-2"
+                                >
+                                    <li
+                                        v-for="bracket in child.age_brackets"
+                                        :key="bracket.id"
+                                        class="flex flex-col gap-2 rounded-lg bg-surface px-3 py-2 sm:flex-row sm:items-center sm:justify-between"
+                                    >
+                                        <div>
+                                            <div class="text-sm font-medium text-ink">
+                                                {{ bracket.name }}
+                                                <span
+                                                    v-if="child.inherits_age_brackets"
+                                                    class="ml-2 text-xs font-semibold uppercase tracking-[0.12em] text-ink-muted"
+                                                >
+                                                    Inherited
+                                                </span>
+                                            </div>
+                                            <div class="text-xs text-ink-muted">
+                                                {{ formatAgeBracketRange(bracket) }}
+                                            </div>
+                                        </div>
+                                        <div
+                                            v-if="! child.inherits_age_brackets"
+                                            class="flex gap-2"
+                                        >
+                                            <button
+                                                type="button"
+                                                class="text-sm font-semibold text-ink-muted hover:text-ink"
+                                                @click="ageBracketFormModal?.open(child, bracket)"
+                                            >
+                                                Edit
+                                            </button>
+                                            <button
+                                                type="button"
+                                                class="text-sm font-semibold text-red-700 hover:text-red-800"
+                                                @click="deleteAgeBracketModal?.open(child, bracket)"
+                                            >
+                                                Delete
+                                            </button>
+                                        </div>
+                                    </li>
+                                </ul>
+                                <p
+                                    v-else-if="child.inherits_age_brackets"
+                                    class="mt-2 text-xs text-ink-muted"
+                                >
+                                    Inherits parent age brackets (none set on parent yet).
+                                </p>
+                            </li>
+                        </ul>
+                    </li>
+                </ul>
+            </div>
         </div>
 
         <CompetitionFormModal ref="competitionFormModal" />
         <DeleteCompetitionModal ref="deleteCompetitionModal" />
+        <ClassificationFormModal
+            ref="classificationFormModal"
+            :competition="competition"
+        />
+        <DeleteClassificationModal
+            ref="deleteClassificationModal"
+            :competition="competition"
+        />
+        <AgeBracketFormModal
+            ref="ageBracketFormModal"
+            :competition="competition"
+        />
+        <DeleteAgeBracketModal
+            ref="deleteAgeBracketModal"
+            :competition="competition"
+        />
     </AuthenticatedLayout>
 </template>
