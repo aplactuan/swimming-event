@@ -65,6 +65,7 @@ export interface CompetitionEvent {
     sort_order: number;
     eligibilities: EventEligibility[];
     participants?: Participant[];
+    participants_count?: number;
 }
 
 export interface EventShowCompetition {
@@ -85,6 +86,20 @@ export interface Competition {
     classifications?: Classification[];
     events?: CompetitionEvent[];
     participants?: Participant[];
+}
+
+export interface PaginatedMeta {
+    current_page: number;
+    last_page: number;
+    per_page: number;
+    total: number;
+    from: number | null;
+    to: number | null;
+}
+
+export interface Paginated<T> {
+    data: T[];
+    meta: PaginatedMeta;
 }
 
 export type PageProps<

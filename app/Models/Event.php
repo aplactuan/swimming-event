@@ -5,6 +5,7 @@ namespace App\Models;
 use App\Enums\EventGender;
 use Database\Factories\EventFactory;
 use Illuminate\Database\Eloquent\Attributes\Fillable;
+use Illuminate\Database\Eloquent\Builder;
 use Illuminate\Database\Eloquent\Concerns\HasUuids;
 use Illuminate\Database\Eloquent\Factories\HasFactory;
 use Illuminate\Database\Eloquent\Model;
@@ -72,6 +73,20 @@ class Event extends Model
             ->orderBy('last_name')
             ->orderBy('first_name')
             ->withTimestamps();
+    }
+
+    /**
+     * Scope a query to events matching name.
+     */
+    public function scopeSearchByName(Builder $query, ?string $search): Builder
+    {
+        $search = trim((string) $search);
+
+        if ($search === '') {
+            return $query;
+        }
+
+        return $query->whereLike('name', '%'.$search.'%');
     }
 
     /**
