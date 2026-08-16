@@ -5,6 +5,7 @@ namespace App\Models;
 use App\Enums\ParticipantGender;
 use Database\Factories\ParticipantFactory;
 use Illuminate\Database\Eloquent\Attributes\Fillable;
+use Illuminate\Database\Eloquent\Builder;
 use Illuminate\Database\Eloquent\Concerns\HasUuids;
 use Illuminate\Database\Eloquent\Factories\HasFactory;
 use Illuminate\Database\Eloquent\Model;
@@ -57,6 +58,28 @@ class Participant extends Model
     public function events(): BelongsToMany
     {
         return $this->belongsToMany(Event::class)->withTimestamps();
+    }
+
+    /**
+     * Scope a query to participants matching last name or full name.
+     */
+    public function scopeSearchByName(Builder $query, ?string $search): Builder
+    {
+        $search = trim((string) $search);
+
+        if ($search === '') {
+            return $query;
+        }
+
+        $term = '%'.$search.'%';
+
+        return $query->where(function (Builder $builder) use ($term): void {
+            $builder
+                ->whereLike('last_name', $term)
+                ->orWhereRaw("lower(first_name || ' ' || last_name) like lower(?)", [$term])
+                ->orWhereRaw("lower(last_name || ' ' || first_name) like lower(?)", [$term])
+                ->orWhereRaw("lower(last_name || ', ' || first_name) like lower(?)", [$term]);
+        });
     }
 
     /**

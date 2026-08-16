@@ -16,14 +16,21 @@ import type {
     Competition,
     CompetitionEvent,
     EventGender,
+    Paginated,
     Participant,
     ParticipantGender,
 } from '@/types';
-import { Head, Link } from '@inertiajs/vue3';
-import { computed, ref } from 'vue';
+import { Head, Link, router } from '@inertiajs/vue3';
+import { computed, ref, watch } from 'vue';
 
 const props = defineProps<{
     competition: Competition;
+    participants: Paginated<Participant>;
+    events: Paginated<CompetitionEvent>;
+    filters: {
+        participant_search: string;
+        event_search: string;
+    };
 }>();
 
 const competitionFormModal = ref<{ open: (competition?: Competition) => void } | null>(
@@ -50,9 +57,126 @@ const participantFormModal = ref<{ open: (participant?: Participant) => void } |
 const deleteParticipantModal = ref<{ open: (participant: Participant) => void } | null>(null);
 
 const classifications = computed(() => props.competition.classifications ?? []);
-const events = computed(() => props.competition.events ?? []);
-const participants = computed(() => props.competition.participants ?? []);
 const detailsOpen = ref(false);
+const participantSearch = ref(props.filters.participant_search);
+const eventSearch = ref(props.filters.event_search);
+
+let participantSearchTimeout: ReturnType<typeof setTimeout> | null = null;
+let eventSearchTimeout: ReturnType<typeof setTimeout> | null = null;
+
+watch(
+    () => props.filters.participant_search,
+    (value) => {
+        participantSearch.value = value;
+    },
+);
+
+watch(
+    () => props.filters.event_search,
+    (value) => {
+        eventSearch.value = value;
+    },
+);
+
+const visitLists = (
+    overrides: Record<string, string | number | undefined> = {},
+    only: string[] = ['participants', 'events', 'filters'],
+) => {
+    router.get(
+        route('competitions.show', props.competition.id),
+        {
+            participant_search: props.filters.participant_search || undefined,
+            event_search: props.filters.event_search || undefined,
+            participants_page:
+                props.participants.meta.current_page > 1
+                    ? props.participants.meta.current_page
+                    : undefined,
+            events_page:
+                props.events.meta.current_page > 1
+                    ? props.events.meta.current_page
+                    : undefined,
+            ...overrides,
+        },
+        {
+            preserveState: true,
+            preserveScroll: true,
+            replace: true,
+            only,
+        },
+    );
+};
+
+watch(participantSearch, (value) => {
+    if (participantSearchTimeout) {
+        clearTimeout(participantSearchTimeout);
+    }
+
+    participantSearchTimeout = setTimeout(() => {
+        if (value === props.filters.participant_search) {
+            return;
+        }
+
+        visitLists(
+            {
+                participant_search: value || undefined,
+                participants_page: undefined,
+            },
+            ['participants', 'filters'],
+        );
+    }, 300);
+});
+
+watch(eventSearch, (value) => {
+    if (eventSearchTimeout) {
+        clearTimeout(eventSearchTimeout);
+    }
+
+    eventSearchTimeout = setTimeout(() => {
+        if (value === props.filters.event_search) {
+            return;
+        }
+
+        visitLists(
+            {
+                event_search: value || undefined,
+                events_page: undefined,
+            },
+            ['events', 'filters'],
+        );
+    }, 300);
+});
+
+const goToParticipantsPage = (page: number) => {
+    if (page < 1 || page > props.participants.meta.last_page || page === props.participants.meta.current_page) {
+        return;
+    }
+
+    visitLists(
+        {
+            participants_page: page > 1 ? page : undefined,
+        },
+        ['participants', 'filters'],
+    );
+};
+
+const goToEventsPage = (page: number) => {
+    if (page < 1 || page > props.events.meta.last_page || page === props.events.meta.current_page) {
+        return;
+    }
+
+    visitLists(
+        {
+            events_page: page > 1 ? page : undefined,
+        },
+        ['events', 'filters'],
+    );
+};
+
+const participantCountLabel = (event: CompetitionEvent) => {
+    const count = event.participants_count ?? event.participants?.length ?? 0;
+
+    return `${count} ${count === 1 ? 'participant' : 'participants'}`;
+};
 
 const openEditCompetitionModal = () => {
     competitionFormModal.value?.open(props.competition);
@@ -97,15 +221,15 @@ const formatEntryFee = (value: number) =>
 
 const formatAgeBracketRange = (bracket: AgeBracket) => {
     if (bracket.start_birthday && bracket.end_birthday) {
-        return `${formatShortDate(bracket.start_birthday)} – ${formatShortDate(bracket.end_birthday)}`;
+        return `Birthday is ${formatShortDate(bracket.start_birthday)} – ${formatShortDate(bracket.end_birthday)}`;
     }
 
     if (bracket.start_birthday) {
-        return `On or after ${formatShortDate(bracket.start_birthday)}`;
+        return `Birthday is on or after ${formatShortDate(bracket.start_birthday)}`;
     }
 
     if (bracket.end_birthday) {
-        return `On or before ${formatShortDate(bracket.end_birthday)}`;
+        return `Birthday is on or before ${formatShortDate(bracket.end_birthday)}`;
     }
 
     return 'No birthday range';
@@ -256,6 +380,270 @@ const formatParticipantName = (participant: Participant) =>
                         </dd>
                     </div>
                 </dl>
+            </div>
+
+            <div class="grid gap-6 lg:grid-cols-2 lg:items-start">
+                <div class="sm-card">
+                    <div class="flex flex-col gap-4 sm:flex-row sm:items-end sm:justify-between">
+                        <div>
+                            <div class="sm-label">Entries</div>
+                            <h3 class="mt-1 font-serif text-xl font-bold text-ink">
+                                Participants
+                            </h3>
+                            <p class="mt-1 text-sm text-ink-muted">
+                                Register swimmers. Marking paid auto-enters matching events.
+                            </p>
+                        </div>
+                        <button
+                            type="button"
+                            class="sm-btn-secondary"
+                            @click="participantFormModal?.open()"
+                        >
+                            Add participant
+                        </button>
+                    </div>
+
+                    <div class="mt-4">
+                        <label class="sr-only" for="participant-search">
+                            Search participants
+                        </label>
+                        <input
+                            id="participant-search"
+                            v-model="participantSearch"
+                            type="search"
+                            class="sm-input block w-full"
+                            placeholder="Search by full name or last name"
+                            autocomplete="off"
+                        />
+                    </div>
+
+                    <div
+                        v-if="participants.meta.total === 0 && ! filters.participant_search"
+                        class="mt-6 rounded-xl bg-surface px-4 py-6 text-sm text-ink-muted"
+                    >
+                        No participants yet.
+                    </div>
+
+                    <div
+                        v-else-if="participants.data.length === 0"
+                        class="mt-6 rounded-xl bg-surface px-4 py-6 text-sm text-ink-muted"
+                    >
+                        No participants match “{{ filters.participant_search }}”.
+                    </div>
+
+                    <template v-else>
+                        <ul class="mt-6 space-y-3">
+                            <li
+                                v-for="participant in participants.data"
+                                :key="participant.id"
+                                class="rounded-xl border border-surface-muted bg-white p-4"
+                            >
+                                <div class="flex flex-col gap-3 sm:flex-row sm:items-start sm:justify-between">
+                                    <div>
+                                        <h4 class="font-semibold text-ink">
+                                            {{ formatParticipantName(participant) }}
+                                        </h4>
+                                        <p class="mt-1 text-sm text-ink-muted">
+                                            {{ formatGender(participant.gender) }}
+                                            · {{ participant.team }}
+                                            · {{ formatShortDate(participant.birthdate) }}
+                                            · {{ participant.classification?.name ?? 'Unknown class' }}
+                                            · {{ participant.paid ? 'Paid' : 'Unpaid' }}
+                                        </p>
+                                    </div>
+                                    <div class="flex flex-wrap gap-2">
+                                        <button
+                                            type="button"
+                                            class="text-sm font-semibold text-ink-muted hover:text-ink"
+                                            @click="participantFormModal?.open(participant)"
+                                        >
+                                            Edit
+                                        </button>
+                                        <button
+                                            type="button"
+                                            class="text-sm font-semibold text-red-700 hover:text-red-800"
+                                            @click="deleteParticipantModal?.open(participant)"
+                                        >
+                                            Delete
+                                        </button>
+                                    </div>
+                                </div>
+                            </li>
+                        </ul>
+
+                        <div
+                            v-if="participants.meta.last_page > 1"
+                            class="mt-4 flex items-center justify-between gap-3 text-sm text-ink-muted"
+                        >
+                            <p>
+                                Showing
+                                {{ participants.meta.from }}–{{ participants.meta.to }}
+                                of {{ participants.meta.total }}
+                            </p>
+                            <div class="flex gap-2">
+                                <button
+                                    type="button"
+                                    class="sm-btn-secondary px-3 py-1.5"
+                                    :disabled="participants.meta.current_page <= 1"
+                                    @click="goToParticipantsPage(participants.meta.current_page - 1)"
+                                >
+                                    Previous
+                                </button>
+                                <button
+                                    type="button"
+                                    class="sm-btn-secondary px-3 py-1.5"
+                                    :disabled="
+                                        participants.meta.current_page >= participants.meta.last_page
+                                    "
+                                    @click="goToParticipantsPage(participants.meta.current_page + 1)"
+                                >
+                                    Next
+                                </button>
+                            </div>
+                        </div>
+                    </template>
+                </div>
+
+                <div class="sm-card">
+                    <div class="flex flex-col gap-4 sm:flex-row sm:items-end sm:justify-between">
+                        <div>
+                            <div class="sm-label">Program</div>
+                            <h3 class="mt-1 font-serif text-xl font-bold text-ink">
+                                Events
+                            </h3>
+                            <p class="mt-1 text-sm text-ink-muted">
+                                Define swim events and which classification + age
+                                bracket pairs may enter.
+                            </p>
+                        </div>
+                        <button
+                            type="button"
+                            class="sm-btn-secondary"
+                            @click="eventFormModal?.open()"
+                        >
+                            Add event
+                        </button>
+                    </div>
+
+                    <div class="mt-4">
+                        <label class="sr-only" for="event-search">
+                            Search events
+                        </label>
+                        <input
+                            id="event-search"
+                            v-model="eventSearch"
+                            type="search"
+                            class="sm-input block w-full"
+                            placeholder="Search by event name"
+                            autocomplete="off"
+                        />
+                    </div>
+
+                    <div
+                        v-if="events.meta.total === 0 && ! filters.event_search"
+                        class="mt-6 rounded-xl bg-surface px-4 py-6 text-sm text-ink-muted"
+                    >
+                        No events yet.
+                    </div>
+
+                    <div
+                        v-else-if="events.data.length === 0"
+                        class="mt-6 rounded-xl bg-surface px-4 py-6 text-sm text-ink-muted"
+                    >
+                        No events match “{{ filters.event_search }}”.
+                    </div>
+
+                    <template v-else>
+                        <ul class="mt-6 space-y-3">
+                            <li
+                                v-for="event in events.data"
+                                :key="event.id"
+                                class="rounded-xl border border-surface-muted bg-white p-4"
+                            >
+                                <div class="flex flex-col gap-3 sm:flex-row sm:items-start sm:justify-between">
+                                    <div>
+                                        <h4 class="font-semibold text-ink">
+                                            <Link
+                                                :href="
+                                                    route('events.show', {
+                                                        competition: competition.id,
+                                                        event: event.id,
+                                                    })
+                                                "
+                                                class="hover:underline"
+                                            >
+                                                {{ event.name }}
+                                            </Link>
+                                        </h4>
+                                        <p class="mt-1 text-sm text-ink-muted">
+                                            {{ formatGender(event.gender) }}
+                                            · {{ participantCountLabel(event) }}
+                                        </p>
+                                        <p class="mt-2 text-sm text-ink">
+                                            {{ formatEligibilitySummary(event) }}
+                                        </p>
+                                    </div>
+                                    <div class="flex flex-wrap gap-2">
+                                        <Link
+                                            :href="
+                                                route('events.show', {
+                                                    competition: competition.id,
+                                                    event: event.id,
+                                                })
+                                            "
+                                            class="text-sm font-semibold text-ink-muted hover:text-ink"
+                                        >
+                                            View
+                                        </Link>
+                                        <button
+                                            type="button"
+                                            class="text-sm font-semibold text-ink-muted hover:text-ink"
+                                            @click="eventFormModal?.open(event)"
+                                        >
+                                            Edit
+                                        </button>
+                                        <button
+                                            type="button"
+                                            class="text-sm font-semibold text-red-700 hover:text-red-800"
+                                            @click="deleteEventModal?.open(event)"
+                                        >
+                                            Delete
+                                        </button>
+                                    </div>
+                                </div>
+                            </li>
+                        </ul>
+
+                        <div
+                            v-if="events.meta.last_page > 1"
+                            class="mt-4 flex items-center justify-between gap-3 text-sm text-ink-muted"
+                        >
+                            <p>
+                                Showing
+                                {{ events.meta.from }}–{{ events.meta.to }}
+                                of {{ events.meta.total }}
+                            </p>
+                            <div class="flex gap-2">
+                                <button
+                                    type="button"
+                                    class="sm-btn-secondary px-3 py-1.5"
+                                    :disabled="events.meta.current_page <= 1"
+                                    @click="goToEventsPage(events.meta.current_page - 1)"
+                                >
+                                    Previous
+                                </button>
+                                <button
+                                    type="button"
+                                    class="sm-btn-secondary px-3 py-1.5"
+                                    :disabled="events.meta.current_page >= events.meta.last_page"
+                                    @click="goToEventsPage(events.meta.current_page + 1)"
+                                >
+                                    Next
+                                </button>
+                            </div>
+                        </div>
+                    </template>
+                </div>
             </div>
 
             <div class="sm-card">
@@ -452,167 +840,6 @@ const formatParticipantName = (participant: Participant) =>
                                 </p>
                             </li>
                         </ul>
-                    </li>
-                </ul>
-            </div>
-
-            <div class="sm-card">
-                <div class="flex flex-col gap-4 sm:flex-row sm:items-end sm:justify-between">
-                    <div>
-                        <div class="sm-label">Entries</div>
-                        <h3 class="mt-1 font-serif text-xl font-bold text-ink">
-                            Participants
-                        </h3>
-                        <p class="mt-1 text-sm text-ink-muted">
-                            Register swimmers. Marking paid auto-enters matching events.
-                        </p>
-                    </div>
-                    <button
-                        type="button"
-                        class="sm-btn-secondary"
-                        @click="participantFormModal?.open()"
-                    >
-                        Add participant
-                    </button>
-                </div>
-
-                <div
-                    v-if="participants.length === 0"
-                    class="mt-6 rounded-xl bg-surface px-4 py-6 text-sm text-ink-muted"
-                >
-                    No participants yet.
-                </div>
-
-                <ul v-else class="mt-6 space-y-3">
-                    <li
-                        v-for="participant in participants"
-                        :key="participant.id"
-                        class="rounded-xl border border-surface-muted bg-white p-4"
-                    >
-                        <div class="flex flex-col gap-3 sm:flex-row sm:items-start sm:justify-between">
-                            <div>
-                                <h4 class="font-semibold text-ink">
-                                    {{ formatParticipantName(participant) }}
-                                </h4>
-                                <p class="mt-1 text-sm text-ink-muted">
-                                    {{ formatGender(participant.gender) }}
-                                    · {{ participant.team }}
-                                    · {{ formatShortDate(participant.birthdate) }}
-                                    · {{ participant.classification?.name ?? 'Unknown class' }}
-                                    · {{ participant.paid ? 'Paid' : 'Unpaid' }}
-                                </p>
-                            </div>
-                            <div class="flex flex-wrap gap-2">
-                                <button
-                                    type="button"
-                                    class="text-sm font-semibold text-ink-muted hover:text-ink"
-                                    @click="participantFormModal?.open(participant)"
-                                >
-                                    Edit
-                                </button>
-                                <button
-                                    type="button"
-                                    class="text-sm font-semibold text-red-700 hover:text-red-800"
-                                    @click="deleteParticipantModal?.open(participant)"
-                                >
-                                    Delete
-                                </button>
-                            </div>
-                        </div>
-                    </li>
-                </ul>
-            </div>
-
-            <div class="sm-card">
-                <div class="flex flex-col gap-4 sm:flex-row sm:items-end sm:justify-between">
-                    <div>
-                        <div class="sm-label">Program</div>
-                        <h3 class="mt-1 font-serif text-xl font-bold text-ink">
-                            Events
-                        </h3>
-                        <p class="mt-1 text-sm text-ink-muted">
-                            Define swim events and which classification + age
-                            bracket pairs may enter.
-                        </p>
-                    </div>
-                    <button
-                        type="button"
-                        class="sm-btn-secondary"
-                        @click="eventFormModal?.open()"
-                    >
-                        Add event
-                    </button>
-                </div>
-
-                <div
-                    v-if="events.length === 0"
-                    class="mt-6 rounded-xl bg-surface px-4 py-6 text-sm text-ink-muted"
-                >
-                    No events yet.
-                </div>
-
-                <ul v-else class="mt-6 space-y-3">
-                    <li
-                        v-for="event in events"
-                        :key="event.id"
-                        class="rounded-xl border border-surface-muted bg-white p-4"
-                    >
-                        <div class="flex flex-col gap-3 sm:flex-row sm:items-start sm:justify-between">
-                            <div>
-                                <h4 class="font-semibold text-ink">
-                                    <Link
-                                        :href="
-                                            route('events.show', {
-                                                competition: competition.id,
-                                                event: event.id,
-                                            })
-                                        "
-                                        class="hover:underline"
-                                    >
-                                        {{ event.name }}
-                                    </Link>
-                                </h4>
-                                <p class="mt-1 text-sm text-ink-muted">
-                                    {{ formatGender(event.gender) }}
-                                    · {{ (event.participants ?? []).length }}
-                                    {{
-                                        (event.participants ?? []).length === 1
-                                            ? 'participant'
-                                            : 'participants'
-                                    }}
-                                </p>
-                                <p class="mt-2 text-sm text-ink">
-                                    {{ formatEligibilitySummary(event) }}
-                                </p>
-                            </div>
-                            <div class="flex flex-wrap gap-2">
-                                <Link
-                                    :href="
-                                        route('events.show', {
-                                            competition: competition.id,
-                                            event: event.id,
-                                        })
-                                    "
-                                    class="text-sm font-semibold text-ink-muted hover:text-ink"
-                                >
-                                    View
-                                </Link>
-                                <button
-                                    type="button"
-                                    class="text-sm font-semibold text-ink-muted hover:text-ink"
-                                    @click="eventFormModal?.open(event)"
-                                >
-                                    Edit
-                                </button>
-                                <button
-                                    type="button"
-                                    class="text-sm font-semibold text-red-700 hover:text-red-800"
-                                    @click="deleteEventModal?.open(event)"
-                                >
-                                    Delete
-                                </button>
-                            </div>
-                        </div>
                     </li>
                 </ul>
             </div>
