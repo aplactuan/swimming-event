@@ -18,7 +18,10 @@ return new class extends Migration
             $table->foreignUuid('age_bracket_id')->constrained()->cascadeOnDelete();
             $table->timestamps();
 
-            $table->unique(['event_id', 'classification_id', 'age_bracket_id']);
+            $table->unique(
+                ['event_id', 'classification_id', 'age_bracket_id'],
+                'event_eligibilities_unique'
+            );
         });
     }
 
