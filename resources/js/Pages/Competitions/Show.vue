@@ -52,6 +52,7 @@ const deleteParticipantModal = ref<{ open: (participant: Participant) => void } 
 const classifications = computed(() => props.competition.classifications ?? []);
 const events = computed(() => props.competition.events ?? []);
 const participants = computed(() => props.competition.participants ?? []);
+const detailsOpen = ref(false);
 
 const openEditCompetitionModal = () => {
     competitionFormModal.value?.open(props.competition);
@@ -177,12 +178,39 @@ const formatParticipantName = (participant: Participant) =>
             </div>
 
             <div class="sm-card">
-                <div class="sm-label">Meet details</div>
-                <h3 class="mt-1 font-serif text-xl font-bold text-ink">
-                    Schedule & entry
-                </h3>
+                <button
+                    type="button"
+                    class="flex w-full items-center justify-between gap-4 text-left"
+                    :aria-expanded="detailsOpen"
+                    @click="detailsOpen = !detailsOpen"
+                >
+                    <div>
+                        <div class="sm-label">Meet details</div>
+                        <h3 class="mt-1 font-serif text-xl font-bold text-ink">
+                            Schedule & entry
+                        </h3>
+                    </div>
+                    <span
+                        class="inline-flex h-9 w-9 shrink-0 items-center justify-center rounded-full border border-surface-muted bg-white text-ink transition"
+                        :class="{ 'rotate-180': detailsOpen }"
+                        aria-hidden="true"
+                    >
+                        <svg viewBox="0 0 24 24" fill="none" class="h-4 w-4">
+                            <path
+                                d="M6 9l6 6 6-6"
+                                stroke="currentColor"
+                                stroke-width="2"
+                                stroke-linecap="round"
+                                stroke-linejoin="round"
+                            />
+                        </svg>
+                    </span>
+                </button>
 
-                <dl class="mt-6 grid gap-4 sm:grid-cols-2">
+                <dl
+                    v-show="detailsOpen"
+                    class="mt-6 grid gap-4 sm:grid-cols-2"
+                >
                     <div class="rounded-xl bg-surface px-4 py-3">
                         <dt class="text-xs font-semibold uppercase tracking-[0.14em] text-ink-muted">
                             Competition date
