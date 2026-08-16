@@ -61,7 +61,7 @@ const formatShortDate = (value: string) =>
     <Head :title="event.name" />
 
     <AuthenticatedLayout>
-        <div class="mx-auto max-w-4xl space-y-6">
+        <div class="space-y-6">
             <div>
                 <Link
                     :href="route('competitions.show', competition.id)"
