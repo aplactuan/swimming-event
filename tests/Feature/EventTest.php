@@ -3,11 +3,13 @@
 namespace Tests\Feature;
 
 use App\Enums\EventGender;
+use App\Enums\ParticipantGender;
 use App\Models\AgeBracket;
 use App\Models\Classification;
 use App\Models\Competition;
 use App\Models\Event;
 use App\Models\EventEligibility;
+use App\Models\Participant;
 use App\Models\User;
 use Illuminate\Foundation\Testing\RefreshDatabase;
 use Inertia\Testing\AssertableInertia as Assert;
@@ -294,6 +296,122 @@ class EventTest extends TestCase
         $this->assertModelExists($event);
     }
 
+    public function test_creating_an_event_auto_enrolls_matching_paid_participants(): void
+    {
+        $user = User::factory()->create();
+        $competition = Competition::factory()->create();
+        [$classification, $bracket] = $this->classificationWithBracket($competition);
+
+        $matchingPaid = Participant::factory()->paid()->create([
+            'competition_id' => $competition->id,
+            'classification_id' => $classification->id,
+            'gender' => ParticipantGender::Female,
+            'birthdate' => '2015-06-15',
+        ]);
+        $unpaidMatching = Participant::factory()->create([
+            'competition_id' => $competition->id,
+            'classification_id' => $classification->id,
+            'gender' => ParticipantGender::Female,
+            'birthdate' => '2015-06-15',
+            'paid' => false,
+        ]);
+        $wrongGender = Participant::factory()->paid()->create([
+            'competition_id' => $competition->id,
+            'classification_id' => $classification->id,
+            'gender' => ParticipantGender::Male,
+            'birthdate' => '2015-06-15',
+        ]);
+        $wrongAge = Participant::factory()->paid()->create([
+            'competition_id' => $competition->id,
+            'classification_id' => $classification->id,
+            'gender' => ParticipantGender::Female,
+            'birthdate' => '2010-01-01',
+        ]);
+
+        $response = $this
+            ->actingAs($user)
+            ->post(route('events.store', $competition), [
+                'name' => '25m Freestyle',
+                'gender' => EventGender::Female->value,
+                'eligibilities' => [
+                    [
+                        'classification_id' => $classification->id,
+                        'age_bracket_id' => $bracket->id,
+                    ],
+                ],
+            ]);
+
+        $response
+            ->assertRedirect(route('competitions.show', $competition))
+            ->assertSessionHas('status', 'event-created');
+
+        $event = Event::query()->first();
+
+        $this->assertNotNull($event);
+        $this->assertTrue($event->participants->contains('id', $matchingPaid->id));
+        $this->assertFalse($event->participants->contains('id', $unpaidMatching->id));
+        $this->assertFalse($event->participants->contains('id', $wrongGender->id));
+        $this->assertFalse($event->participants->contains('id', $wrongAge->id));
+    }
+
+    public function test_updating_an_event_attaches_newly_matching_paid_participants_without_detaching_manual_entries(): void
+    {
+        $user = User::factory()->create();
+        $competition = Competition::factory()->create();
+        [$classification, $bracket] = $this->classificationWithBracket($competition);
+        $olderBracket = AgeBracket::factory()->olderAndUp()->create([
+            'classification_id' => $classification->id,
+            'sort_order' => 2,
+        ]);
+
+        $event = Event::factory()->create([
+            'competition_id' => $competition->id,
+            'name' => '25m Freestyle',
+            'gender' => EventGender::Female,
+        ]);
+        EventEligibility::query()->create([
+            'event_id' => $event->id,
+            'classification_id' => $classification->id,
+            'age_bracket_id' => $bracket->id,
+        ]);
+
+        $newlyMatching = Participant::factory()->paid()->create([
+            'competition_id' => $competition->id,
+            'classification_id' => $classification->id,
+            'gender' => ParticipantGender::Female,
+            'birthdate' => '2010-06-15',
+        ]);
+        $manualOverride = Participant::factory()->paid()->create([
+            'competition_id' => $competition->id,
+            'classification_id' => $classification->id,
+            'gender' => ParticipantGender::Male,
+            'birthdate' => '2015-06-15',
+        ]);
+        $event->participants()->attach($manualOverride->id);
+
+        $response = $this
+            ->actingAs($user)
+            ->put(route('events.update', [$competition, $event]), [
+                'name' => '25m Freestyle',
+                'gender' => EventGender::Female->value,
+                'eligibilities' => [
+                    [
+                        'classification_id' => $classification->id,
+                        'age_bracket_id' => $olderBracket->id,
+                    ],
+                ],
+            ]);
+
+        $response
+            ->assertRedirect(route('competitions.show', $competition))
+            ->assertSessionHas('status', 'event-updated');
+
+        $event->refresh()->load('participants');
+
+        $this->assertTrue($event->participants->contains('id', $newlyMatching->id));
+        $this->assertTrue($event->participants->contains('id', $manualOverride->id));
+    }
+
     public function test_competition_show_includes_events_and_eligibilities(): void
     {
         $user = User::factory()->create();
@@ -317,11 +435,11 @@ class EventTest extends TestCase
             ->assertOk()
             ->assertInertia(fn (Assert $page) => $page
                 ->component('Competitions/Show')
-                ->has('competition.events', 1)
-                ->where('competition.events.0.name', '25m Breaststroke (Novice 1)')
-                ->where('competition.events.0.gender', 'female')
-                ->where('competition.events.0.eligibilities.0.classification.name', 'Novice')
-                ->where('competition.events.0.eligibilities.0.age_bracket.name', '8-10'));
+                ->has('events.data', 1)
+                ->where('events.data.0.name', '25m Breaststroke (Novice 1)')
+                ->where('events.data.0.gender', 'female')
+                ->where('events.data.0.eligibilities.0.classification.name', 'Novice')
+                ->where('events.data.0.eligibilities.0.age_bracket.name', '8-10'));
     }
 
     /**
