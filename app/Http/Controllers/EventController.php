@@ -8,6 +8,7 @@ use App\Http\Resources\EventResource;
 use App\Http\Resources\ParticipantResource;
 use App\Models\Competition;
 use App\Models\Event;
+use App\Services\ParticipantEventSync;
 use Illuminate\Http\RedirectResponse;
 use Illuminate\Support\Facades\DB;
 use Inertia\Inertia;
@@ -41,11 +42,14 @@ class EventController extends Controller
     /**
      * Store a newly created event.
      */
-    public function store(StoreEventRequest $request, Competition $competition): RedirectResponse
-    {
+    public function store(
+        StoreEventRequest $request,
+        Competition $competition,
+        ParticipantEventSync $sync,
+    ): RedirectResponse {
         $validated = $request->validated();
 
-        DB::transaction(function () use ($competition, $validated): void {
+        DB::transaction(function () use ($competition, $validated, $sync): void {
             $event = $competition->events()->create([
                 'name' => $validated['name'],
                 'gender' => $validated['gender'],
@@ -53,6 +57,7 @@ class EventController extends Controller
             ]);
 
             $event->syncEligibilities($validated['eligibilities']);
+            $sync->syncForEvent($event);
         });
 
         return redirect()
@@ -67,16 +72,18 @@ class EventController extends Controller
         UpdateEventRequest $request,
         Competition $competition,
         Event $event,
+        ParticipantEventSync $sync,
     ): RedirectResponse {
         $validated = $request->validated();
 
-        DB::transaction(function () use ($event, $validated): void {
+        DB::transaction(function () use ($event, $validated, $sync): void {
             $event->update([
                 'name' => $validated['name'],
                 'gender' => $validated['gender'],
             ]);
 
             $event->syncEligibilities($validated['eligibilities']);
+            $sync->syncForEvent($event);
         });
 
         return redirect()

@@ -26,6 +26,22 @@ class ParticipantEventSync
     }
 
     /**
+     * Attach all paid participants that match the event.
+     */
+    public function syncForEvent(Event $event): void
+    {
+        $matchingParticipantIds = $this->matchingPaidParticipants($event)
+            ->pluck('id')
+            ->all();
+
+        if ($matchingParticipantIds === []) {
+            return;
+        }
+
+        $event->participants()->syncWithoutDetaching($matchingParticipantIds);
+    }
+
+    /**
      * Remove the participant from all events.
      */
     public function clearEvents(Participant $participant): void
@@ -75,6 +91,23 @@ class ParticipantEventSync
 
         return $events->filter(
             fn (Event $event): bool => $this->matches($participant, $event),
+        )->values();
+    }
+
+    /**
+     * @return Collection<int, Participant>
+     */
+    private function matchingPaidParticipants(Event $event): Collection
+    {
+        $event->loadMissing('eligibilities.ageBracket');
+
+        $participants = Participant::query()
+            ->where('competition_id', $event->competition_id)
+            ->where('paid', true)
+            ->get();
+
+        return $participants->filter(
+            fn (Participant $participant): bool => $this->matches($participant, $event),
         )->values();
     }
 
