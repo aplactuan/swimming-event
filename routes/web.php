@@ -44,6 +44,8 @@ Route::middleware(['auth', 'verified'])->group(function () {
 
         Route::post('/competitions/{competition}/participants', [ParticipantController::class, 'store'])
             ->name('participants.store');
+        Route::post('/competitions/{competition}/participants/import', [ParticipantController::class, 'import'])
+            ->name('participants.import');
         Route::put('/competitions/{competition}/participants/{participant}', [ParticipantController::class, 'update'])
             ->name('participants.update');
         Route::delete('/competitions/{competition}/participants/{participant}', [ParticipantController::class, 'destroy'])

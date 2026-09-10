@@ -102,10 +102,21 @@ export interface Paginated<T> {
     meta: PaginatedMeta;
 }
 
+export interface ImportSummary {
+    imported: number;
+    skipped_duplicates: number;
+    skipped_invalid: number;
+    classifications_created: number;
+}
+
 export type PageProps<
     T extends Record<string, unknown> = Record<string, unknown>,
 > = T & {
     auth: {
         user: User;
+    };
+    flash: {
+        status: string | null;
+        import_summary: ImportSummary | null;
     };
 };
