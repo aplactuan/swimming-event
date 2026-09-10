@@ -2,12 +2,15 @@
 
 namespace App\Http\Controllers;
 
+use App\Http\Requests\ImportParticipantsRequest;
 use App\Http\Requests\StoreParticipantRequest;
 use App\Http\Requests\UpdateParticipantRequest;
 use App\Models\Competition;
 use App\Models\Participant;
+use App\Services\ImportCompetitionParticipants;
 use App\Services\ParticipantEventSync;
 use Illuminate\Http\RedirectResponse;
+use Illuminate\Http\UploadedFile;
 
 class ParticipantController extends Controller
 {
@@ -28,6 +31,25 @@ class ParticipantController extends Controller
         return redirect()
             ->route('competitions.show', $competition)
             ->with('status', 'participant-created');
+    }
+
+    /**
+     * Import participants from a CSV file.
+     */
+    public function import(
+        ImportParticipantsRequest $request,
+        Competition $competition,
+        ImportCompetitionParticipants $importer,
+    ): RedirectResponse {
+        /** @var UploadedFile $file */
+        $file = $request->file('file');
+
+        $summary = $importer->import($competition, $file);
+
+        return redirect()
+            ->route('competitions.show', $competition)
+            ->with('status', 'participants-imported')
+            ->with('import_summary', $summary);
     }
 
     /**

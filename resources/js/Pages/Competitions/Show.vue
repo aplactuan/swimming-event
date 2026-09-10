@@ -7,6 +7,7 @@ import DeleteClassificationModal from '@/Pages/Competitions/Partials/DeleteClass
 import DeleteEventModal from '@/Pages/Competitions/Partials/DeleteEventModal.vue';
 import DeleteParticipantModal from '@/Pages/Competitions/Partials/DeleteParticipantModal.vue';
 import EventFormModal from '@/Pages/Competitions/Partials/EventFormModal.vue';
+import ImportParticipantsModal from '@/Pages/Competitions/Partials/ImportParticipantsModal.vue';
 import ParticipantFormModal from '@/Pages/Competitions/Partials/ParticipantFormModal.vue';
 import CompetitionFormModal from '@/Pages/Dashboard/Partials/CompetitionFormModal.vue';
 import DeleteCompetitionModal from '@/Pages/Dashboard/Partials/DeleteCompetitionModal.vue';
@@ -20,7 +21,7 @@ import type {
     Participant,
     ParticipantGender,
 } from '@/types';
-import { Head, Link, router } from '@inertiajs/vue3';
+import { Head, Link, router, usePage } from '@inertiajs/vue3';
 import { computed, ref, watch } from 'vue';
 
 const props = defineProps<{
@@ -54,7 +55,42 @@ const deleteAgeBracketModal = ref<{
 const eventFormModal = ref<{ open: (event?: CompetitionEvent) => void } | null>(null);
 const deleteEventModal = ref<{ open: (event: CompetitionEvent) => void } | null>(null);
 const participantFormModal = ref<{ open: (participant?: Participant) => void } | null>(null);
+const importParticipantsModal = ref<{ open: () => void } | null>(null);
 const deleteParticipantModal = ref<{ open: (participant: Participant) => void } | null>(null);
+
+const page = usePage();
+const importSummary = computed(() => page.props.flash.import_summary);
+const importSummaryMessage = computed(() => {
+    const summary = importSummary.value;
+
+    if (summary === null) {
+        return '';
+    }
+
+    const parts = [
+        `Imported ${summary.imported} ${summary.imported === 1 ? 'participant' : 'participants'}.`,
+    ];
+
+    if (summary.skipped_duplicates > 0) {
+        parts.push(
+            `Skipped ${summary.skipped_duplicates} ${summary.skipped_duplicates === 1 ? 'duplicate' : 'duplicates'}.`,
+        );
+    }
+
+    if (summary.skipped_invalid > 0) {
+        parts.push(
+            `Skipped ${summary.skipped_invalid} invalid ${summary.skipped_invalid === 1 ? 'row' : 'rows'}.`,
+        );
+    }
+
+    if (summary.classifications_created > 0) {
+        parts.push(
+            `Created ${summary.classifications_created} ${summary.classifications_created === 1 ? 'classification' : 'classifications'}.`,
+        );
+    }
+
+    return parts.join(' ');
+});
 
 const classifications = computed(() => props.competition.classifications ?? []);
 const detailsOpen = ref(false);
@@ -394,13 +430,29 @@ const formatParticipantName = (participant: Participant) =>
                                 Register swimmers. Marking paid auto-enters matching events.
                             </p>
                         </div>
-                        <button
-                            type="button"
-                            class="sm-btn-secondary"
-                            @click="participantFormModal?.open()"
-                        >
-                            Add participant
-                        </button>
+                        <div class="flex flex-wrap gap-2">
+                            <button
+                                type="button"
+                                class="sm-btn-secondary"
+                                @click="importParticipantsModal?.open()"
+                            >
+                                Import
+                            </button>
+                            <button
+                                type="button"
+                                class="sm-btn-secondary"
+                                @click="participantFormModal?.open()"
+                            >
+                                Add participant
+                            </button>
+                        </div>
+                    </div>
+
+                    <div
+                        v-if="importSummaryMessage"
+                        class="mt-4 rounded-xl bg-surface px-4 py-3 text-sm text-ink"
+                    >
+                        {{ importSummaryMessage }}
                     </div>
 
                     <div class="mt-4">
@@ -861,6 +913,10 @@ const formatParticipantName = (participant: Participant) =>
         />
         <DeleteAgeBracketModal
             ref="deleteAgeBracketModal"
+            :competition="competition"
+        />
+        <ImportParticipantsModal
+            ref="importParticipantsModal"
             :competition="competition"
         />
         <ParticipantFormModal
