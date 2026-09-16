@@ -13,6 +13,8 @@
     "sail": false,
     "skills": [
         "laravel-best-practices",
+        "inertia-vue-development",
+        "tailwindcss-development",
         "deploying-laravel-cloud"
     ]
 }
