@@ -35,6 +35,8 @@ Route::middleware(['auth', 'verified'])->group(function () {
 
         Route::post('/competitions/{competition}/events', [EventController::class, 'store'])
             ->name('events.store');
+        Route::post('/competitions/{competition}/events/generate', [EventController::class, 'generate'])
+            ->name('events.generate');
         Route::get('/competitions/{competition}/events/{event}', [EventController::class, 'show'])
             ->name('events.show');
         Route::put('/competitions/{competition}/events/{event}', [EventController::class, 'update'])

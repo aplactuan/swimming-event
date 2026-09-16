@@ -7,6 +7,7 @@ import DeleteClassificationModal from '@/Pages/Competitions/Partials/DeleteClass
 import DeleteEventModal from '@/Pages/Competitions/Partials/DeleteEventModal.vue';
 import DeleteParticipantModal from '@/Pages/Competitions/Partials/DeleteParticipantModal.vue';
 import EventFormModal from '@/Pages/Competitions/Partials/EventFormModal.vue';
+import EventGeneratorModal from '@/Pages/Competitions/Partials/EventGeneratorModal.vue';
 import ImportParticipantsModal from '@/Pages/Competitions/Partials/ImportParticipantsModal.vue';
 import ParticipantFormModal from '@/Pages/Competitions/Partials/ParticipantFormModal.vue';
 import CompetitionFormModal from '@/Pages/Dashboard/Partials/CompetitionFormModal.vue';
@@ -53,6 +54,7 @@ const deleteAgeBracketModal = ref<{
     open: (classification: Classification, ageBracket: AgeBracket) => void;
 } | null>(null);
 const eventFormModal = ref<{ open: (event?: CompetitionEvent) => void } | null>(null);
+const eventGeneratorModal = ref<{ open: () => void } | null>(null);
 const deleteEventModal = ref<{ open: (event: CompetitionEvent) => void } | null>(null);
 const participantFormModal = ref<{ open: (participant?: Participant) => void } | null>(null);
 const importParticipantsModal = ref<{ open: () => void } | null>(null);
@@ -568,13 +570,22 @@ const formatParticipantName = (participant: Participant) =>
                                 bracket pairs may enter.
                             </p>
                         </div>
-                        <button
-                            type="button"
-                            class="sm-btn-secondary"
-                            @click="eventFormModal?.open()"
-                        >
-                            Add event
-                        </button>
+                        <div class="flex flex-wrap gap-2">
+                            <button
+                                type="button"
+                                class="sm-btn-secondary"
+                                @click="eventGeneratorModal?.open()"
+                            >
+                                Generate events
+                            </button>
+                            <button
+                                type="button"
+                                class="sm-btn-secondary"
+                                @click="eventFormModal?.open()"
+                            >
+                                Add event
+                            </button>
+                        </div>
                     </div>
 
                     <div class="mt-4">
@@ -928,6 +939,10 @@ const formatParticipantName = (participant: Participant) =>
             :competition="competition"
         />
         <EventFormModal ref="eventFormModal" :competition="competition" />
+        <EventGeneratorModal
+            ref="eventGeneratorModal"
+            :competition="competition"
+        />
         <DeleteEventModal ref="deleteEventModal" :competition="competition" />
     </AuthenticatedLayout>
 </template>
