@@ -2,12 +2,14 @@
 
 namespace App\Http\Controllers;
 
+use App\Http\Requests\GenerateEventsRequest;
 use App\Http\Requests\StoreEventRequest;
 use App\Http\Requests\UpdateEventRequest;
 use App\Http\Resources\EventResource;
 use App\Http\Resources\ParticipantResource;
 use App\Models\Competition;
 use App\Models\Event;
+use App\Services\GenerateCompetitionEvents;
 use App\Services\ParticipantEventSync;
 use Illuminate\Http\RedirectResponse;
 use Illuminate\Support\Facades\DB;
@@ -16,6 +18,29 @@ use Inertia\Response;
 
 class EventController extends Controller
 {
+    /**
+     * Generate events from the selected genders and eligibility pairs.
+     */
+    public function generate(
+        GenerateEventsRequest $request,
+        Competition $competition,
+        GenerateCompetitionEvents $generator,
+    ): RedirectResponse {
+        /** @var array{name: string, genders: list<string>, eligibilities: list<array{classification_id: string, age_bracket_id: string}>} $validated */
+        $validated = $request->validated();
+        $generatedCount = $generator->generate(
+            competition: $competition,
+            name: $validated['name'],
+            genders: $validated['genders'],
+            eligibilities: $validated['eligibilities'],
+        );
+
+        return redirect()
+            ->route('competitions.show', $competition)
+            ->with('status', 'events-generated')
+            ->with('generated_events_count', $generatedCount);
+    }
+
     /**
      * Display the specified event.
      */
