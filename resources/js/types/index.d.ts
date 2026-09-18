@@ -25,6 +25,12 @@ export interface Classification {
 
 export type EventGender = 'male' | 'female' | 'mixed';
 
+export type ProgramSortColumn =
+    | 'classification'
+    | 'age_bracket'
+    | 'gender'
+    | 'name';
+
 export type ParticipantGender = 'male' | 'female';
 
 export interface EventEligibility {

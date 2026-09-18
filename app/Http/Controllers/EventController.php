@@ -2,6 +2,7 @@
 
 namespace App\Http\Controllers;
 
+use App\Http\Requests\GenerateEventProgramRequest;
 use App\Http\Requests\GenerateEventsRequest;
 use App\Http\Requests\StoreEventRequest;
 use App\Http\Requests\UpdateEventRequest;
@@ -10,6 +11,7 @@ use App\Http\Resources\ParticipantResource;
 use App\Models\Competition;
 use App\Models\Event;
 use App\Services\GenerateCompetitionEvents;
+use App\Services\GenerateEventProgram;
 use App\Services\ParticipantEventSync;
 use Illuminate\Http\RedirectResponse;
 use Illuminate\Support\Facades\DB;
@@ -39,6 +41,29 @@ class EventController extends Controller
             ->route('competitions.show', $competition)
             ->with('status', 'events-generated')
             ->with('generated_events_count', $generatedCount);
+    }
+
+    /**
+     * Reorder the competition's events into a program.
+     */
+    public function program(
+        GenerateEventProgramRequest $request,
+        Competition $competition,
+        GenerateEventProgram $programGenerator,
+    ): RedirectResponse {
+        /** @var array{columns: list<string>, gender_order: list<string>, name_order: list<string>} $validated */
+        $validated = $request->validated();
+        $orderedCount = $programGenerator->generate(
+            competition: $competition,
+            columns: $validated['columns'],
+            genderOrder: $validated['gender_order'],
+            nameOrder: $validated['name_order'],
+        );
+
+        return redirect()
+            ->route('competitions.show', $competition)
+            ->with('status', 'program-generated')
+            ->with('ordered_events_count', $orderedCount);
     }
 
     /**

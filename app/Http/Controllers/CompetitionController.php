@@ -58,6 +58,7 @@ class CompetitionController extends Controller
             'competition' => (new CompetitionResource($competition))->resolve(),
             'participants' => $this->paginatedPayload($participants, ParticipantResource::class),
             'events' => $this->paginatedPayload($events, EventResource::class),
+            'event_names' => $this->distinctEventNames($competition),
             'filters' => [
                 'participant_search' => $participantSearch,
                 'event_search' => $eventSearch,
@@ -99,6 +100,22 @@ class CompetitionController extends Controller
         return redirect()
             ->route('dashboard')
             ->with('status', 'competition-deleted');
+    }
+
+    /**
+     * The competition's unique event names, in their current program order.
+     *
+     * @return list<string>
+     */
+    private function distinctEventNames(Competition $competition): array
+    {
+        return Event::query()
+            ->whereBelongsTo($competition)
+            ->select('name')
+            ->groupBy('name')
+            ->orderByRaw('min(sort_order)')
+            ->pluck('name')
+            ->all();
     }
 
     /**

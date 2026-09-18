@@ -253,6 +253,83 @@ class ClassificationTest extends TestCase
                 ->where('competition.classifications.0.children.0.inherits_age_brackets', false));
     }
 
+    public function test_authenticated_users_can_reorder_root_classifications(): void
+    {
+        $user = User::factory()->create();
+        $competition = Competition::factory()->create();
+        $first = Classification::factory()->create([
+            'competition_id' => $competition->id,
+            'sort_order' => 1,
+        ]);
+        $second = Classification::factory()->create([
+            'competition_id' => $competition->id,
+            'sort_order' => 2,
+        ]);
+        $third = Classification::factory()->create([
+            'competition_id' => $competition->id,
+            'sort_order' => 3,
+        ]);
+
+        $this
+            ->actingAs($user)
+            ->patch(route('classifications.reorder', $competition), [
+                'parent_id' => null,
+                'ids' => [$third->id, $first->id, $second->id],
+            ])
+            ->assertRedirect(route('competitions.show', $competition))
+            ->assertSessionHas('status', 'classifications-reordered');
+
+        $this->assertSame(1, $third->fresh()->sort_order);
+        $this->assertSame(2, $first->fresh()->sort_order);
+        $this->assertSame(3, $second->fresh()->sort_order);
+    }
+
+    public function test_authenticated_users_can_reorder_child_classifications(): void
+    {
+        $user = User::factory()->create();
+        $competition = Competition::factory()->create();
+        $parent = Classification::factory()->create([
+            'competition_id' => $competition->id,
+        ]);
+        $childA = Classification::factory()->childOf($parent)->create(['sort_order' => 1]);
+        $childB = Classification::factory()->childOf($parent)->create(['sort_order' => 2]);
+
+        $this
+            ->actingAs($user)
+            ->patch(route('classifications.reorder', $competition), [
+                'parent_id' => $parent->id,
+                'ids' => [$childB->id, $childA->id],
+            ])
+            ->assertRedirect(route('competitions.show', $competition))
+            ->assertSessionHasNoErrors();
+
+        $this->assertSame(1, $childB->fresh()->sort_order);
+        $this->assertSame(2, $childA->fresh()->sort_order);
+    }
+
+    public function test_reorder_rejects_ids_from_a_different_parent_scope(): void
+    {
+        $user = User::factory()->create();
+        $competition = Competition::factory()->create();
+        $parent = Classification::factory()->create([
+            'competition_id' => $competition->id,
+        ]);
+        $root = Classification::factory()->create([
+            'competition_id' => $competition->id,
+        ]);
+        $child = Classification::factory()->childOf($parent)->create();
+
+        $this
+            ->actingAs($user)
+            ->from(route('competitions.show', $competition))
+            ->patch(route('classifications.reorder', $competition), [
+                'parent_id' => null,
+                'ids' => [$root->id, $child->id],
+            ])
+            ->assertRedirect(route('competitions.show', $competition))
+            ->assertSessionHasErrors('ids.1');
+    }
+
     public function test_competition_show_child_inherits_parent_age_brackets_when_unset(): void
     {
         $user = User::factory()->create();
