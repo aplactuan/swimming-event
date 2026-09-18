@@ -21,6 +21,8 @@ Route::middleware(['auth', 'verified'])->group(function () {
     Route::scopeBindings()->group(function () {
         Route::post('/competitions/{competition}/classifications', [ClassificationController::class, 'store'])
             ->name('classifications.store');
+        Route::patch('/competitions/{competition}/classifications/reorder', [ClassificationController::class, 'reorder'])
+            ->name('classifications.reorder');
         Route::put('/competitions/{competition}/classifications/{classification}', [ClassificationController::class, 'update'])
             ->name('classifications.update');
         Route::delete('/competitions/{competition}/classifications/{classification}', [ClassificationController::class, 'destroy'])
@@ -28,6 +30,8 @@ Route::middleware(['auth', 'verified'])->group(function () {
 
         Route::post('/competitions/{competition}/classifications/{classification}/age-brackets', [AgeBracketController::class, 'store'])
             ->name('age-brackets.store');
+        Route::patch('/competitions/{competition}/classifications/{classification}/age-brackets/reorder', [AgeBracketController::class, 'reorder'])
+            ->name('age-brackets.reorder');
         Route::put('/competitions/{competition}/classifications/{classification}/age-brackets/{age_bracket}', [AgeBracketController::class, 'update'])
             ->name('age-brackets.update');
         Route::delete('/competitions/{competition}/classifications/{classification}/age-brackets/{age_bracket}', [AgeBracketController::class, 'destroy'])
@@ -37,6 +41,8 @@ Route::middleware(['auth', 'verified'])->group(function () {
             ->name('events.store');
         Route::post('/competitions/{competition}/events/generate', [EventController::class, 'generate'])
             ->name('events.generate');
+        Route::post('/competitions/{competition}/events/program', [EventController::class, 'program'])
+            ->name('events.program');
         Route::get('/competitions/{competition}/events/{event}', [EventController::class, 'show'])
             ->name('events.show');
         Route::put('/competitions/{competition}/events/{event}', [EventController::class, 'update'])

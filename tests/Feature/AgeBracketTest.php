@@ -198,6 +198,57 @@ class AgeBracketTest extends TestCase
         $this->assertModelMissing($bracket);
     }
 
+    public function test_authenticated_users_can_reorder_age_brackets(): void
+    {
+        $user = User::factory()->create();
+        $classification = Classification::factory()->create();
+        $first = AgeBracket::factory()->create([
+            'classification_id' => $classification->id,
+            'sort_order' => 1,
+        ]);
+        $second = AgeBracket::factory()->create([
+            'classification_id' => $classification->id,
+            'sort_order' => 2,
+        ]);
+
+        $this
+            ->actingAs($user)
+            ->patch(route('age-brackets.reorder', [
+                $classification->competition,
+                $classification,
+            ]), [
+                'ids' => [$second->id, $first->id],
+            ])
+            ->assertRedirect(route('competitions.show', $classification->competition))
+            ->assertSessionHas('status', 'age-brackets-reordered');
+
+        $this->assertSame(1, $second->fresh()->sort_order);
+        $this->assertSame(2, $first->fresh()->sort_order);
+    }
+
+    public function test_age_bracket_reorder_rejects_ids_from_another_classification(): void
+    {
+        $user = User::factory()->create();
+        $classification = Classification::factory()->create();
+        $foreign = AgeBracket::factory()->create();
+        $own = AgeBracket::factory()->create([
+            'classification_id' => $classification->id,
+            'sort_order' => 1,
+        ]);
+
+        $this
+            ->actingAs($user)
+            ->from(route('competitions.show', $classification->competition))
+            ->patch(route('age-brackets.reorder', [
+                $classification->competition,
+                $classification,
+            ]), [
+                'ids' => [$own->id, $foreign->id],
+            ])
+            ->assertRedirect(route('competitions.show', $classification->competition))
+            ->assertSessionHasErrors('ids.1');
+    }
+
     /**
      * @param  array<string, mixed>  $overrides
      * @return array<string, mixed>

@@ -2,11 +2,13 @@
 
 namespace App\Http\Controllers;
 
+use App\Http\Requests\ReorderClassificationsRequest;
 use App\Http\Requests\StoreClassificationRequest;
 use App\Http\Requests\UpdateClassificationRequest;
 use App\Models\Classification;
 use App\Models\Competition;
 use Illuminate\Http\RedirectResponse;
+use Illuminate\Support\Facades\DB;
 
 class ClassificationController extends Controller
 {
@@ -53,5 +55,26 @@ class ClassificationController extends Controller
         return redirect()
             ->route('competitions.show', $competition)
             ->with('status', 'classification-deleted');
+    }
+
+    /**
+     * Reorder sibling classifications for the given parent.
+     */
+    public function reorder(ReorderClassificationsRequest $request, Competition $competition): RedirectResponse
+    {
+        /** @var list<string> $ids */
+        $ids = $request->validated('ids');
+
+        DB::transaction(function () use ($ids): void {
+            foreach ($ids as $index => $id) {
+                Classification::query()
+                    ->whereKey($id)
+                    ->update(['sort_order' => $index + 1]);
+            }
+        });
+
+        return redirect()
+            ->route('competitions.show', $competition)
+            ->with('status', 'classifications-reordered');
     }
 }
