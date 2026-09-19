@@ -25,7 +25,7 @@ const submit = () => {
 
         <div class="mb-8 text-center">
             <div class="sm-label">Account recovery</div>
-            <h1 class="mt-2 font-serif text-3xl font-bold tracking-tight text-ink">
+            <h1 class="mt-2 text-3xl font-bold tracking-tight text-ink">
                 Reset password
             </h1>
             <p class="mt-2 text-sm text-ink-muted">
@@ -35,7 +35,7 @@ const submit = () => {
 
         <div
             v-if="status"
-            class="mb-4 rounded-xl bg-mint px-4 py-3 text-sm font-medium text-navy"
+            class="mb-4 rounded-xl bg-mint px-4 py-3 text-sm font-medium text-pool"
         >
             {{ status }}
         </div>
@@ -68,7 +68,7 @@ const submit = () => {
             <p class="text-center text-sm text-ink-muted">
                 <Link
                     :href="route('login')"
-                    class="font-semibold text-ink underline decoration-gold underline-offset-4"
+                    class="font-semibold text-ink underline decoration-aqua underline-offset-4"
                 >
                     Back to login
                 </Link>

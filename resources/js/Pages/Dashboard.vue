@@ -64,7 +64,7 @@ const openDeleteCompetitionModal = (competition: Competition) => {
             <section class="space-y-4">
                 <div>
                     <div class="sm-label">Schedule</div>
-                    <h3 class="mt-1 font-serif text-2xl font-bold text-ink">
+                    <h3 class="mt-1 text-2xl font-bold text-ink">
                         Upcoming competitions
                     </h3>
                 </div>
@@ -86,7 +86,7 @@ const openDeleteCompetitionModal = (competition: Competition) => {
                     v-else
                     class="sm-card border border-dashed border-surface-muted text-center"
                 >
-                    <p class="font-serif text-lg font-semibold text-ink">
+                    <p class="text-lg font-semibold text-ink">
                         No upcoming competitions
                     </p>
                     <p class="mt-1 text-sm text-ink-muted">

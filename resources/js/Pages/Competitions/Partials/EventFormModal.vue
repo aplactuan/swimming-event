@@ -150,7 +150,7 @@ defineExpose({ open });
     <Modal :show="show" max-width="2xl" @close="close">
         <form class="p-6" @submit.prevent="submit">
             <div class="sm-label">{{ isEditing ? 'Update event' : 'New event' }}</div>
-            <h2 class="mt-1 font-serif text-2xl font-bold text-ink">
+            <h2 class="mt-1 text-2xl font-bold text-ink">
                 {{ title }}
             </h2>
             <p class="mt-1 text-sm text-ink-muted">

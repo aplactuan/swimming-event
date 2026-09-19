@@ -33,7 +33,7 @@ const submit = () => {
 
         <div class="mb-8 text-center">
             <div class="sm-label">Account recovery</div>
-            <h1 class="mt-2 font-serif text-3xl font-bold tracking-tight text-ink">
+            <h1 class="mt-2 text-3xl font-bold tracking-tight text-ink">
                 Choose a new password
             </h1>
         </div>

@@ -58,7 +58,7 @@ defineExpose({ open });
 <template>
     <Modal :show="show" max-width="md" @close="close">
         <div class="p-6">
-            <h2 class="font-serif text-xl font-bold text-ink">
+            <h2 class="text-xl font-bold text-ink">
                 Delete participant?
             </h2>
 

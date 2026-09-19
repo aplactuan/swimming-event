@@ -21,7 +21,7 @@ const form = useForm({
 <template>
     <section>
         <header>
-            <h2 class="font-serif text-xl font-bold text-ink">
+            <h2 class="text-xl font-bold text-ink">
                 Profile Information
             </h2>
 
@@ -72,7 +72,7 @@ const form = useForm({
                         :href="route('verification.send')"
                         method="post"
                         as="button"
-                        class="rounded-md text-sm text-ink-muted underline decoration-gold underline-offset-4 hover:text-ink focus:outline-none focus:ring-2 focus:ring-gold focus:ring-offset-2"
+                        class="rounded-md text-sm text-ink-muted underline decoration-aqua underline-offset-4 hover:text-ink focus:outline-none focus:ring-2 focus:ring-aqua focus:ring-offset-2"
                     >
                         Click here to re-send the verification email.
                     </Link>

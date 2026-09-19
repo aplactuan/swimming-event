@@ -2,6 +2,7 @@
 import ApplicationLogo from '@/Components/ApplicationLogo.vue';
 import Checkbox from '@/Components/Checkbox.vue';
 import InputError from '@/Components/InputError.vue';
+import SwimmerIllustration from '@/Components/SwimmerIllustration.vue';
 import { Head, Link, useForm } from '@inertiajs/vue3';
 import { ref } from 'vue';
 
@@ -38,67 +39,47 @@ const features = [
         <Head title="Log in" />
 
         <aside
-            class="relative hidden overflow-hidden bg-navy px-10 py-10 text-white lg:flex lg:flex-col"
+            class="sm-water relative hidden overflow-hidden px-10 py-10 text-white lg:flex lg:flex-col"
         >
             <div
-                class="pointer-events-none absolute inset-0 opacity-[0.12]"
-                style="
-                    background-image: repeating-linear-gradient(
-                        -32deg,
-                        transparent,
-                        transparent 18px,
-                        rgba(255, 255, 255, 0.35) 18px,
-                        rgba(255, 255, 255, 0.35) 19px
-                    );
-                "
+                class="sm-caustics pointer-events-none absolute inset-0 opacity-[0.12]"
+                aria-hidden="true"
             />
 
             <div class="relative z-10">
                 <ApplicationLogo class="text-white" />
             </div>
 
-            <div class="relative z-10 flex flex-1 flex-col justify-center py-16">
-                <div
-                    class="mb-10 inline-flex h-16 w-16 items-center justify-center rounded-2xl border border-white/15 bg-white/5 backdrop-blur"
-                >
-                    <svg
-                        viewBox="0 0 24 24"
-                        fill="none"
-                        class="h-8 w-8 text-gold"
-                        aria-hidden="true"
-                    >
-                        <path
-                            d="M4 8.5c2.2-1.5 4.4-1.5 6.6 0s4.4 1.5 6.6 0M4 12.5c2.2-1.5 4.4-1.5 6.6 0s4.4 1.5 6.6 0M4 16.5c2.2-1.5 4.4-1.5 6.6 0s4.4 1.5 6.6 0"
-                            stroke="currentColor"
-                            stroke-width="1.8"
-                            stroke-linecap="round"
-                        />
-                    </svg>
-                </div>
+            <div class="relative z-10 flex flex-1 flex-col justify-center py-10">
+                <SwimmerIllustration
+                    class="mb-10 h-64 w-full max-w-md animate-drift drop-shadow-2xl"
+                />
 
                 <p
-                    class="text-xs font-semibold uppercase tracking-[0.22em] text-gold"
+                    class="text-xs font-semibold uppercase tracking-[0.22em] text-aqua"
                 >
                     Your meet, in rhythm
                 </p>
                 <h1
-                    class="mt-4 max-w-md font-serif text-5xl font-bold leading-tight tracking-tight"
+                    class="mt-4 max-w-md text-5xl font-bold leading-tight tracking-tight"
                 >
                     Make every lane count.
                 </h1>
-                <p class="mt-5 max-w-md text-base leading-relaxed text-white/65">
+                <p class="mt-5 max-w-md text-base leading-relaxed text-white/70">
                     The calm behind race day. Organize events, seed heats, and
                     keep your swimmers moving forward.
                 </p>
 
-                <ul class="mt-12 flex flex-wrap gap-x-6 gap-y-3">
+                <div class="sm-rope mt-10 max-w-md opacity-80" aria-hidden="true" />
+
+                <ul class="mt-8 flex flex-wrap gap-x-6 gap-y-3">
                     <li
                         v-for="feature in features"
                         :key="feature"
-                        class="flex items-center gap-2 text-sm text-white/80"
+                        class="flex items-center gap-2 text-sm text-white/85"
                     >
                         <span
-                            class="inline-flex h-5 w-5 items-center justify-center rounded-full bg-gold/15 text-gold"
+                            class="inline-flex h-5 w-5 items-center justify-center rounded-full bg-aqua/20 text-aqua"
                         >
                             <svg
                                 viewBox="0 0 24 24"
@@ -121,16 +102,16 @@ const features = [
         </aside>
 
         <section
-            class="flex min-h-screen flex-col justify-center bg-surface px-6 py-10 sm:px-10"
+            class="sm-shallows flex min-h-screen flex-col justify-center px-6 py-10 sm:px-10"
         >
             <div class="mx-auto w-full max-w-md">
                 <div class="mb-8 lg:hidden">
-                    <ApplicationLogo class="text-navy" />
+                    <ApplicationLogo class="text-pool" />
                 </div>
 
                 <p class="sm-label text-ink">Welcome back, coach</p>
                 <h2
-                    class="mt-2 font-serif text-4xl font-bold tracking-tight text-navy"
+                    class="mt-2 text-4xl font-bold tracking-tight text-pool"
                 >
                     Sign in to your lane.
                 </h2>
@@ -141,7 +122,7 @@ const features = [
 
                 <div
                     v-if="status"
-                    class="mt-6 rounded-xl bg-mint px-4 py-3 text-sm font-medium text-navy"
+                    class="mt-6 rounded-xl bg-mint px-4 py-3 text-sm font-medium text-pool"
                 >
                     {{ status }}
                 </div>
@@ -188,7 +169,7 @@ const features = [
                                 autofocus
                                 autocomplete="username"
                                 placeholder="coach@aquaticsclub.com"
-                                class="block w-full rounded-xl border-0 bg-surface py-3 pl-11 pr-4 text-ink shadow-none placeholder:text-ink-faint focus:ring-2 focus:ring-gold"
+                                class="block w-full rounded-xl border-0 bg-surface py-3 pl-11 pr-4 text-ink shadow-none placeholder:text-ink-faint focus:ring-2 focus:ring-aqua"
                             />
                         </div>
                         <InputError class="mt-2" :message="form.errors.email" />
@@ -226,7 +207,7 @@ const features = [
                                 required
                                 autocomplete="current-password"
                                 placeholder="Enter your password"
-                                class="block w-full rounded-xl border-0 bg-surface py-3 pl-11 pr-12 text-ink shadow-none placeholder:text-ink-faint focus:ring-2 focus:ring-gold"
+                                class="block w-full rounded-xl border-0 bg-surface py-3 pl-11 pr-12 text-ink shadow-none placeholder:text-ink-faint focus:ring-2 focus:ring-aqua"
                             />
                             <button
                                 type="button"
@@ -292,7 +273,7 @@ const features = [
                         <Link
                             v-if="canResetPassword"
                             :href="route('password.request')"
-                            class="text-sm font-semibold text-[#8B5E3C] transition hover:text-navy"
+                            class="text-sm font-semibold text-aqua-deep transition hover:text-pool"
                         >
                             Forgot password?
                         </Link>
@@ -300,7 +281,7 @@ const features = [
 
                     <button
                         type="submit"
-                        class="mt-6 inline-flex w-full items-center justify-center gap-2 rounded-xl bg-gold px-5 py-3.5 text-sm font-semibold text-navy transition hover:bg-gold-deep focus:outline-none focus:ring-2 focus:ring-gold focus:ring-offset-2 disabled:opacity-40"
+                        class="mt-6 inline-flex w-full items-center justify-center gap-2 rounded-xl bg-aqua px-5 py-3.5 text-sm font-semibold text-pool transition hover:bg-aqua-deep focus:outline-none focus:ring-2 focus:ring-aqua focus:ring-offset-2 disabled:opacity-40"
                         :disabled="form.processing"
                     >
                         Sign in
@@ -320,7 +301,7 @@ const features = [
                     New to SwimMeet?
                     <Link
                         :href="route('register')"
-                        class="font-semibold text-[#8B5E3C] transition hover:text-navy"
+                        class="font-semibold text-aqua-deep transition hover:text-pool"
                     >
                         Create an account
                     </Link>

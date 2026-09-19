@@ -18,18 +18,96 @@
     }
 
     .sm-heading {
-        @apply font-serif text-3xl font-bold tracking-tight text-ink md:text-4xl;
+        @apply text-3xl font-bold tracking-tight text-ink md:text-4xl;
     }
 
     .sm-input {
-        @apply rounded-xl border-surface-muted bg-white text-ink shadow-none placeholder:text-ink-faint focus:border-gold focus:ring-gold;
+        @apply rounded-xl border-surface-muted bg-white text-ink shadow-none placeholder:text-ink-faint focus:border-aqua focus:ring-aqua;
     }
 
     .sm-btn-primary {
-        @apply inline-flex items-center justify-center gap-2 rounded-full bg-gold px-5 py-2.5 text-sm font-semibold text-navy transition hover:bg-gold-deep focus:outline-none focus:ring-2 focus:ring-gold focus:ring-offset-2 disabled:opacity-40;
+        @apply inline-flex items-center justify-center gap-2 rounded-full bg-aqua px-5 py-2.5 text-sm font-semibold text-pool transition hover:bg-aqua-deep focus:outline-none focus:ring-2 focus:ring-aqua focus:ring-offset-2 disabled:opacity-40;
     }
 
     .sm-btn-secondary {
-        @apply inline-flex items-center justify-center gap-2 rounded-full border border-surface-muted bg-white px-5 py-2.5 text-sm font-semibold text-ink transition hover:bg-surface focus:outline-none focus:ring-2 focus:ring-navy/20 focus:ring-offset-2;
+        @apply inline-flex items-center justify-center gap-2 rounded-full border border-surface-muted bg-white px-5 py-2.5 text-sm font-semibold text-ink transition hover:bg-surface focus:outline-none focus:ring-2 focus:ring-pool/20 focus:ring-offset-2;
+    }
+
+    /**
+     * Deep water fill for dark chrome such as the sidebar and the sign-in panel.
+     */
+    .sm-water {
+        @apply bg-pool;
+        background-image:
+            radial-gradient(
+                ellipse at 15% 0%,
+                rgba(87, 209, 227, 0.28),
+                transparent 55%
+            ),
+            radial-gradient(
+                ellipse at 90% 100%,
+                rgba(17, 106, 145, 0.55),
+                transparent 60%
+            );
+    }
+
+    /**
+     * Pale water fill for light page backgrounds.
+     */
+    .sm-shallows {
+        @apply bg-surface;
+        background-image:
+            radial-gradient(
+                ellipse at 0% 0%,
+                rgba(87, 209, 227, 0.16),
+                transparent 45%
+            ),
+            radial-gradient(
+                ellipse at 100% 0%,
+                rgba(165, 233, 241, 0.3),
+                transparent 40%
+            );
+    }
+
+    /**
+     * Angled light caustics. Sits in an absolutely positioned overlay element.
+     */
+    .sm-caustics {
+        background-image: repeating-linear-gradient(
+            -32deg,
+            transparent,
+            transparent 18px,
+            rgba(255, 255, 255, 0.35) 18px,
+            rgba(255, 255, 255, 0.35) 19px
+        );
+    }
+
+    /**
+     * Lane rope: alternating float discs, used as a horizontal divider.
+     */
+    .sm-rope {
+        height: 6px;
+        border-radius: 9999px;
+        background-image: repeating-linear-gradient(
+            90deg,
+            theme('colors.lane.DEFAULT') 0 14px,
+            theme('colors.pool.DEFAULT') 14px 20px,
+            theme('colors.aqua.DEFAULT') 20px 34px,
+            theme('colors.pool.DEFAULT') 34px 40px
+        );
+    }
+
+    /**
+     * Lane number chip, styled like a starting block marker.
+     */
+    .sm-lane-chip {
+        @apply inline-flex h-7 min-w-7 items-center justify-center rounded-lg bg-pool px-2 text-xs font-bold tabular-nums text-aqua;
+    }
+}
+
+@media (prefers-reduced-motion: reduce) {
+    .animate-drift,
+    .animate-ripple {
+        animation: none !important;
     }
 }

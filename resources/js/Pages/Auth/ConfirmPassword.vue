@@ -25,7 +25,7 @@ const submit = () => {
 
         <div class="mb-8 text-center">
             <div class="sm-label">Secure area</div>
-            <h1 class="mt-2 font-serif text-3xl font-bold tracking-tight text-ink">
+            <h1 class="mt-2 text-3xl font-bold tracking-tight text-ink">
                 Confirm password
             </h1>
             <p class="mt-2 text-sm text-ink-muted">

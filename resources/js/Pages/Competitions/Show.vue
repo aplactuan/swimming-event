@@ -396,7 +396,7 @@ const formatParticipantName = (participant: Participant) =>
                 >
                     <div>
                         <div class="sm-label">Meet details</div>
-                        <h3 class="mt-1 font-serif text-xl font-bold text-ink">
+                        <h3 class="mt-1 text-xl font-bold text-ink">
                             Schedule & entry
                         </h3>
                     </div>
@@ -473,7 +473,7 @@ const formatParticipantName = (participant: Participant) =>
                     <div class="flex flex-col gap-4 sm:flex-row sm:items-end sm:justify-between">
                         <div>
                             <div class="sm-label">Entries</div>
-                            <h3 class="mt-1 font-serif text-xl font-bold text-ink">
+                            <h3 class="mt-1 text-xl font-bold text-ink">
                                 Participants
                             </h3>
                             <p class="mt-1 text-sm text-ink-muted">
@@ -610,7 +610,7 @@ const formatParticipantName = (participant: Participant) =>
                     <div class="flex flex-col gap-4 sm:flex-row sm:items-end sm:justify-between">
                         <div>
                             <div class="sm-label">Program</div>
-                            <h3 class="mt-1 font-serif text-xl font-bold text-ink">
+                            <h3 class="mt-1 text-xl font-bold text-ink">
                                 Events
                             </h3>
                             <p class="mt-1 text-sm text-ink-muted">
@@ -768,7 +768,7 @@ const formatParticipantName = (participant: Participant) =>
                 <div class="flex flex-col gap-4 sm:flex-row sm:items-end sm:justify-between">
                     <div>
                         <div class="sm-label">Meet structure</div>
-                        <h3 class="mt-1 font-serif text-xl font-bold text-ink">
+                        <h3 class="mt-1 text-xl font-bold text-ink">
                             Classifications
                         </h3>
                         <p class="mt-1 text-sm text-ink-muted">
