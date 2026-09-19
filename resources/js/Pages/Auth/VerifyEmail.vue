@@ -25,7 +25,7 @@ const verificationLinkSent = computed(
 
         <div class="mb-8 text-center">
             <div class="sm-label">Almost there</div>
-            <h1 class="mt-2 font-serif text-3xl font-bold tracking-tight text-ink">
+            <h1 class="mt-2 text-3xl font-bold tracking-tight text-ink">
                 Verify your email
             </h1>
             <p class="mt-2 text-sm text-ink-muted">
@@ -36,7 +36,7 @@ const verificationLinkSent = computed(
 
         <div
             v-if="verificationLinkSent"
-            class="mb-4 rounded-xl bg-mint px-4 py-3 text-sm font-medium text-navy"
+            class="mb-4 rounded-xl bg-mint px-4 py-3 text-sm font-medium text-pool"
         >
             A new verification link has been sent to your email address.
         </div>
@@ -55,7 +55,7 @@ const verificationLinkSent = computed(
                     :href="route('logout')"
                     method="post"
                     as="button"
-                    class="text-sm font-semibold text-ink underline decoration-gold underline-offset-4"
+                    class="text-sm font-semibold text-ink underline decoration-aqua underline-offset-4"
                 >
                     Log out
                 </Link>

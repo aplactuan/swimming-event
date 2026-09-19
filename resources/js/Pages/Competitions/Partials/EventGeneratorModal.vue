@@ -168,7 +168,7 @@ defineExpose({ open });
     <Modal :show="show" max-width="2xl" @close="close">
         <form class="p-6" @submit.prevent="submit">
             <div class="sm-label">Event generator</div>
-            <h2 class="mt-1 font-serif text-2xl font-bold text-ink">
+            <h2 class="mt-1 text-2xl font-bold text-ink">
                 Generate event program
             </h2>
             <p class="mt-1 text-sm text-ink-muted">
@@ -205,7 +205,7 @@ defineExpose({ open });
                                 v-model="form.genders"
                                 type="checkbox"
                                 :value="option.value"
-                                class="rounded border-surface-muted text-gold shadow-sm focus:ring-gold"
+                                class="rounded border-surface-muted text-aqua shadow-sm focus:ring-aqua"
                             />
                             {{ option.label }}
                         </label>
@@ -235,7 +235,7 @@ defineExpose({ open });
                             <label class="flex items-start gap-3">
                                 <input
                                     type="checkbox"
-                                    class="mt-0.5 rounded border-surface-muted text-gold shadow-sm focus:ring-gold"
+                                    class="mt-0.5 rounded border-surface-muted text-aqua shadow-sm focus:ring-aqua"
                                     :checked="isClassificationSelected(classification)"
                                     :disabled="classification.age_brackets.length === 0"
                                     @change="
@@ -267,7 +267,7 @@ defineExpose({ open });
                                 >
                                     <input
                                         type="checkbox"
-                                        class="rounded border-surface-muted text-gold shadow-sm focus:ring-gold"
+                                        class="rounded border-surface-muted text-aqua shadow-sm focus:ring-aqua"
                                         :checked="
                                             isEligibilitySelected(
                                                 classification.id,

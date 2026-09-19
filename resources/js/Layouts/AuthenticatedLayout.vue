@@ -71,16 +71,23 @@ const isActive = (item: NavItem) => route().current(item.routeName);
 </script>
 
 <template>
-    <div class="min-h-screen bg-surface text-ink">
+    <div class="sm-shallows min-h-screen text-ink">
         <div class="lg:flex">
             <aside
-                class="hidden min-h-screen w-64 shrink-0 flex-col bg-navy px-5 py-6 text-white lg:flex"
+                class="sm-water relative hidden min-h-screen w-64 shrink-0 flex-col overflow-hidden px-5 py-6 text-white lg:flex"
             >
-                <Link :href="route('dashboard')" class="mb-10 text-white">
+                <div
+                    class="sm-caustics pointer-events-none absolute inset-0 opacity-[0.1]"
+                    aria-hidden="true"
+                />
+
+                <Link :href="route('dashboard')" class="relative z-10 mb-6 text-white">
                     <ApplicationLogo />
                 </Link>
 
-                <nav class="flex flex-1 flex-col gap-2">
+                <div class="sm-rope relative z-10 mb-8 opacity-70" aria-hidden="true" />
+
+                <nav class="relative z-10 flex flex-1 flex-col gap-2">
                     <Link
                         v-for="item in navigation"
                         :key="item.label"
@@ -88,7 +95,7 @@ const isActive = (item: NavItem) => route().current(item.routeName);
                         class="group flex items-center justify-between rounded-full px-4 py-2.5 text-sm font-medium transition"
                         :class="
                             isActive(item)
-                                ? 'bg-white text-navy'
+                                ? 'bg-aqua text-pool shadow-soft'
                                 : 'text-white/80 hover:bg-white/10 hover:text-white'
                         "
                     >
@@ -130,7 +137,7 @@ const isActive = (item: NavItem) => route().current(item.routeName);
 
             <div class="flex min-w-0 flex-1 flex-col">
                 <header
-                    class="sticky top-0 z-20 border-b border-surface-muted/80 bg-surface/90 px-4 py-4 backdrop-blur sm:px-6 lg:px-8"
+                    class="sticky top-0 z-20 border-b border-aqua/30 bg-surface/85 px-4 py-4 backdrop-blur sm:px-6 lg:px-8"
                 >
                     <div class="flex items-center justify-between gap-4">
                         <div class="min-w-0">
@@ -142,7 +149,7 @@ const isActive = (item: NavItem) => route().current(item.routeName);
                                 Menu
                             </button>
                             <div class="sm-label">{{ todayLabel }}</div>
-                            <h1 class="mt-1 truncate font-serif text-2xl font-bold tracking-tight text-ink sm:text-3xl">
+                            <h1 class="mt-1 truncate text-2xl font-bold tracking-tight text-ink sm:text-3xl">
                                 {{ greeting }}, {{ firstName }}
                             </h1>
                         </div>
@@ -166,7 +173,7 @@ const isActive = (item: NavItem) => route().current(item.routeName);
                                     />
                                 </svg>
                                 <span
-                                    class="absolute right-2 top-2 h-2.5 w-2.5 rounded-full bg-gold"
+                                    class="absolute right-2 top-2 h-2.5 w-2.5 rounded-full bg-aqua"
                                 />
                             </button>
 
@@ -177,7 +184,7 @@ const isActive = (item: NavItem) => route().current(item.routeName);
                                         class="inline-flex items-center gap-3 rounded-full border border-surface-muted bg-white py-1.5 pl-1.5 pr-3 shadow-soft"
                                     >
                                         <span
-                                            class="inline-flex h-9 w-9 items-center justify-center rounded-full bg-navy text-sm font-semibold text-white"
+                                            class="inline-flex h-9 w-9 items-center justify-center rounded-full bg-pool text-sm font-semibold text-white"
                                         >
                                             {{ initials }}
                                         </span>
@@ -212,7 +219,7 @@ const isActive = (item: NavItem) => route().current(item.routeName);
 
                     <nav
                         v-if="mobileNavOpen"
-                        class="mt-4 grid gap-2 rounded-card bg-navy p-3 text-white lg:hidden"
+                        class="mt-4 grid gap-2 rounded-card bg-pool p-3 text-white lg:hidden"
                     >
                         <Link
                             v-for="item in navigation"
@@ -221,7 +228,7 @@ const isActive = (item: NavItem) => route().current(item.routeName);
                             class="rounded-full px-4 py-2.5 text-sm font-medium"
                             :class="
                                 isActive(item)
-                                    ? 'bg-white text-navy'
+                                    ? 'bg-white text-pool'
                                     : 'text-white/85 hover:bg-white/10'
                             "
                             @click="mobileNavOpen = false"

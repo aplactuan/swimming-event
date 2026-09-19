@@ -14,7 +14,7 @@ withDefaults(
 <template>
     <div class="flex items-center gap-3" :class="{ 'gap-2': compact }">
         <span
-            class="inline-flex items-center justify-center rounded-2xl bg-gold text-navy shadow-soft"
+            class="inline-flex items-center justify-center rounded-2xl bg-aqua text-pool shadow-soft"
             :class="compact ? 'h-9 w-9' : 'h-11 w-11'"
             aria-hidden="true"
         >
@@ -40,7 +40,7 @@ withDefaults(
 
         <div v-if="showWordmark" class="leading-none">
             <div
-                class="font-serif font-bold tracking-tight text-inherit"
+                class="font-bold tracking-tight text-inherit"
                 :class="compact ? 'text-lg' : 'text-xl'"
             >
                 SwimMeet

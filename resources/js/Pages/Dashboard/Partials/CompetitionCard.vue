@@ -43,7 +43,7 @@ const formatEntryFee = (value: number) =>
         <div class="flex items-start justify-between gap-3">
             <div class="min-w-0">
                 <div class="sm-label">Upcoming meet</div>
-                <h3 class="mt-1 truncate font-serif text-xl font-bold text-ink">
+                <h3 class="mt-1 truncate text-xl font-bold text-ink">
                     {{ competition.name }}
                 </h3>
                 <p class="mt-1 text-sm text-ink-muted">
