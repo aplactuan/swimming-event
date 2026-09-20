@@ -13,9 +13,12 @@ const show = ref(false);
 const editingCompetition = ref<Competition | null>(null);
 const nameInput = ref<{ focus: () => void } | null>(null);
 
+const DEFAULT_NUMBER_OF_LANE = '5';
+
 const form = useForm({
     name: '',
     venue: '',
+    number_of_lane: DEFAULT_NUMBER_OF_LANE,
     competition_date: '',
     warm_up_time: '',
     coaches_meeting_time: '',
@@ -36,6 +39,10 @@ const submitLabel = computed(() =>
 const fillForm = (competition?: Competition) => {
     form.name = competition?.name ?? '';
     form.venue = competition?.venue ?? '';
+    form.number_of_lane =
+        competition?.number_of_lane !== undefined
+            ? String(competition.number_of_lane)
+            : DEFAULT_NUMBER_OF_LANE;
     form.competition_date = competition?.competition_date ?? '';
     form.warm_up_time = competition?.warm_up_time ?? '';
     form.coaches_meeting_time = competition?.coaches_meeting_time ?? '';
@@ -186,7 +193,7 @@ defineExpose({ open });
                     />
                 </div>
 
-                <div class="sm:col-span-2">
+                <div>
                     <InputLabel for="entry_fee" value="Entry fee" />
                     <TextInput
                         id="entry_fee"
@@ -198,6 +205,23 @@ defineExpose({ open });
                         required
                     />
                     <InputError class="mt-2" :message="form.errors.entry_fee" />
+                </div>
+
+                <div>
+                    <InputLabel for="number_of_lane" value="Number of lanes" />
+                    <TextInput
+                        id="number_of_lane"
+                        v-model="form.number_of_lane"
+                        type="number"
+                        min="1"
+                        step="1"
+                        class="mt-1 block w-full"
+                        required
+                    />
+                    <InputError
+                        class="mt-2"
+                        :message="form.errors.number_of_lane"
+                    />
                 </div>
             </div>
 

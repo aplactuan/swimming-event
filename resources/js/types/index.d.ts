@@ -56,12 +56,28 @@ export interface Participant {
     gender: ParticipantGender;
     team: string;
     birthdate: string;
+    age: number;
     classification_id: string;
     paid: boolean;
     classification?: {
         id: string;
         name: string;
     };
+}
+
+export interface HeatLane {
+    id: string;
+    lane_number: number;
+    participant_id: string | null;
+    finish_time_hundredths: number | null;
+    finish_time: string | null;
+    participant?: Participant | null;
+}
+
+export interface Heat {
+    id: string;
+    heat_number: number;
+    lanes: HeatLane[];
 }
 
 export interface CompetitionEvent {
@@ -72,11 +88,13 @@ export interface CompetitionEvent {
     eligibilities: EventEligibility[];
     participants?: Participant[];
     participants_count?: number;
+    heats?: Heat[];
 }
 
 export interface EventShowCompetition {
     id: string;
     name: string;
+    number_of_lane: number;
     participants: Participant[];
 }
 
@@ -84,6 +102,7 @@ export interface Competition {
     id: string;
     name: string;
     venue: string;
+    number_of_lane: number;
     competition_date: string;
     warm_up_time: string | null;
     coaches_meeting_time: string | null;

@@ -9,6 +9,7 @@ use App\Models\Classification;
 use App\Models\Competition;
 use App\Models\Event;
 use App\Models\EventEligibility;
+use App\Models\Heat;
 use App\Models\Participant;
 use App\Models\User;
 use Illuminate\Foundation\Testing\RefreshDatabase;
@@ -261,6 +262,12 @@ class EventTest extends TestCase
             'classification_id' => $classification->id,
             'age_bracket_id' => $bracket->id,
         ]);
+        $participant = Participant::factory()->paid()->create([
+            'competition_id' => $competition->id,
+            'classification_id' => $classification->id,
+        ]);
+        $heat = Heat::factory()->withLanes(5)->create(['event_id' => $event->id]);
+        $lane = $heat->assignLane(3, $participant);
 
         $response = $this
             ->actingAs($user)
@@ -272,6 +279,11 @@ class EventTest extends TestCase
 
         $this->assertModelMissing($event);
         $this->assertModelMissing($eligibility);
+        $this->assertModelMissing($heat);
+        $this->assertModelMissing($lane);
+        $this->assertDatabaseCount('heats', 0);
+        $this->assertDatabaseCount('heat_lanes', 0);
+        $this->assertModelExists($participant);
     }
 
     public function test_deleting_a_classification_cascades_event_eligibilities(): void

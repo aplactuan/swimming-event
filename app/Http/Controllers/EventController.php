@@ -75,6 +75,7 @@ class EventController extends Controller
             'eligibilities.classification',
             'eligibilities.ageBracket',
             'participants.classification',
+            'heats.lanes.participant.classification',
         ]);
 
         $competition->load(['participants.classification']);
@@ -83,6 +84,7 @@ class EventController extends Controller
             'competition' => [
                 'id' => $competition->id,
                 'name' => $competition->name,
+                'number_of_lane' => $competition->number_of_lane,
                 'participants' => ParticipantResource::collection($competition->participants)->resolve(),
             ],
             'event' => (new EventResource($event))->resolve(),

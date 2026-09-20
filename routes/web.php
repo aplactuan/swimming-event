@@ -5,6 +5,7 @@ use App\Http\Controllers\ClassificationController;
 use App\Http\Controllers\CompetitionController;
 use App\Http\Controllers\DashboardController;
 use App\Http\Controllers\EventController;
+use App\Http\Controllers\EventHeatController;
 use App\Http\Controllers\EventParticipantController;
 use App\Http\Controllers\ParticipantController;
 use App\Http\Controllers\ProfileController;
@@ -63,6 +64,13 @@ Route::middleware(['auth', 'verified'])->group(function () {
             ->name('event-participants.store');
         Route::delete('/competitions/{competition}/events/{event}/participants/{participant}', [EventParticipantController::class, 'destroy'])
             ->name('event-participants.destroy');
+
+        Route::post('/competitions/{competition}/events/heats/generate', [EventHeatController::class, 'generateAll'])
+            ->name('event-heats.generate-all');
+        Route::post('/competitions/{competition}/events/{event}/heats/generate', [EventHeatController::class, 'generate'])
+            ->name('event-heats.generate');
+        Route::patch('/competitions/{competition}/events/{event}/heats/lanes/swap', [EventHeatController::class, 'swap'])
+            ->name('event-heat-lanes.swap');
     });
 });
 

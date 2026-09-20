@@ -36,6 +36,7 @@ class StoreCompetitionRequest extends FormRequest
         return [
             'name' => ['required', 'string', 'max:255'],
             'venue' => ['required', 'string', 'max:255'],
+            'number_of_lane' => ['sometimes', 'integer', 'min:1'],
             'competition_date' => ['required', 'date'],
             'warm_up_time' => ['nullable', 'date_format:H:i'],
             'coaches_meeting_time' => ['nullable', 'date_format:H:i'],

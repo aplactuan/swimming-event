@@ -8,6 +8,7 @@ import DeleteEventModal from '@/Pages/Competitions/Partials/DeleteEventModal.vue
 import DeleteParticipantModal from '@/Pages/Competitions/Partials/DeleteParticipantModal.vue';
 import EventFormModal from '@/Pages/Competitions/Partials/EventFormModal.vue';
 import EventGeneratorModal from '@/Pages/Competitions/Partials/EventGeneratorModal.vue';
+import GenerateAllHeatsModal from '@/Pages/Competitions/Partials/GenerateAllHeatsModal.vue';
 import ImportParticipantsModal from '@/Pages/Competitions/Partials/ImportParticipantsModal.vue';
 import ParticipantFormModal from '@/Pages/Competitions/Partials/ParticipantFormModal.vue';
 import ProgramGeneratorModal from '@/Pages/Competitions/Partials/ProgramGeneratorModal.vue';
@@ -63,6 +64,7 @@ const deleteAgeBracketModal = ref<{
 const eventFormModal = ref<{ open: (event?: CompetitionEvent) => void } | null>(null);
 const eventGeneratorModal = ref<{ open: () => void } | null>(null);
 const programGeneratorModal = ref<{ open: () => void } | null>(null);
+const generateAllHeatsModal = ref<{ open: () => void } | null>(null);
 const deleteEventModal = ref<{ open: (event: CompetitionEvent) => void } | null>(null);
 const participantFormModal = ref<{ open: (participant?: Participant) => void } | null>(null);
 const importParticipantsModal = ref<{ open: () => void } | null>(null);
@@ -673,18 +675,26 @@ const formatParticipantName = (participant: Participant) =>
                 </div>
 
                 <div class="sm-card">
-                    <div class="flex flex-col gap-4 sm:flex-row sm:items-end sm:justify-between">
-                        <div>
-                            <div class="sm-label">Program</div>
-                            <h3 class="mt-1 text-xl font-semibold text-ink">
-                                Events
-                            </h3>
-                            <p class="mt-1 text-sm text-ink-muted">
-                                Define swim events and which classification + age
-                                bracket pairs may enter.
-                            </p>
-                        </div>
-                        <div class="flex flex-wrap gap-2">
+                    <div>
+                        <div class="sm-label">Program</div>
+                        <h3 class="mt-1 text-xl font-semibold text-ink">
+                            Events
+                        </h3>
+                        <p class="mt-1 text-sm text-ink-muted">
+                            Define swim events and which classification + age
+                            bracket pairs may enter.
+                        </p>
+                    </div>
+
+                    <div class="mt-4 rounded-xl border border-surface-muted bg-surface p-3">
+                        <div class="grid grid-cols-2 gap-2 sm:flex sm:flex-wrap">
+                            <button
+                                type="button"
+                                class="sm-btn-secondary"
+                                @click="generateAllHeatsModal?.open()"
+                            >
+                                Generate heats
+                            </button>
                             <button
                                 type="button"
                                 class="sm-btn-secondary"
@@ -1208,6 +1218,10 @@ const formatParticipantName = (participant: Participant) =>
             ref="programGeneratorModal"
             :competition="competition"
             :event-names="event_names"
+        />
+        <GenerateAllHeatsModal
+            ref="generateAllHeatsModal"
+            :competition="competition"
         />
         <DeleteEventModal ref="deleteEventModal" :competition="competition" />
     </AuthenticatedLayout>
