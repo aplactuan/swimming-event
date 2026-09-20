@@ -351,20 +351,20 @@ const formatParticipantName = (participant: Participant) =>
     <Head :title="competition.name" />
 
     <AuthenticatedLayout>
-        <div class="space-y-6">
+        <div class="mx-auto max-w-7xl space-y-6">
             <div
-                class="flex flex-col gap-4 sm:flex-row sm:items-end sm:justify-between"
+                class="flex flex-col gap-5 border-b border-surface-muted pb-7 sm:flex-row sm:items-end sm:justify-between"
             >
                 <div>
                     <Link
                         :href="route('dashboard')"
-                        class="text-sm font-medium text-ink-muted transition hover:text-ink"
+                        class="inline-flex items-center text-sm font-medium text-ink-muted transition hover:text-pool"
                     >
                         ← Back to dashboard
                     </Link>
-                    <div class="sm-label mt-4">Competition</div>
-                    <h2 class="sm-heading mt-1">{{ competition.name }}</h2>
-                    <p class="mt-2 text-sm text-ink-muted">
+                    <div class="sm-label mt-5">Competition</div>
+                    <h2 class="sm-heading mt-2">{{ competition.name }}</h2>
+                    <p class="mt-2 text-sm font-medium text-ink-muted">
                         {{ competition.venue }}
                     </p>
                 </div>
@@ -379,7 +379,7 @@ const formatParticipantName = (participant: Participant) =>
                     </button>
                     <button
                         type="button"
-                        class="inline-flex items-center justify-center gap-2 rounded-full border border-red-200 bg-white px-5 py-2.5 text-sm font-semibold text-red-700 transition hover:bg-red-50 focus:outline-none focus:ring-2 focus:ring-red-500/20 focus:ring-offset-2"
+                        class="inline-flex items-center justify-center gap-2 rounded-lg border border-red-200 bg-white px-4 py-2.5 text-sm font-semibold text-red-700 transition hover:bg-red-50 focus:outline-none focus:ring-2 focus:ring-red-500/20 focus:ring-offset-2"
                         @click="openDeleteCompetitionModal"
                     >
                         Delete
@@ -396,12 +396,12 @@ const formatParticipantName = (participant: Participant) =>
                 >
                     <div>
                         <div class="sm-label">Meet details</div>
-                        <h3 class="mt-1 text-xl font-bold text-ink">
+                        <h3 class="mt-1 text-xl font-semibold text-ink">
                             Schedule & entry
                         </h3>
                     </div>
                     <span
-                        class="inline-flex h-9 w-9 shrink-0 items-center justify-center rounded-full border border-surface-muted bg-white text-ink transition"
+                        class="inline-flex h-9 w-9 shrink-0 items-center justify-center rounded-lg border border-surface-muted bg-white text-ink transition"
                         :class="{ 'rotate-180': detailsOpen }"
                         aria-hidden="true"
                     >
@@ -419,9 +419,9 @@ const formatParticipantName = (participant: Participant) =>
 
                 <dl
                     v-show="detailsOpen"
-                    class="mt-6 grid gap-4 sm:grid-cols-2"
+                    class="mt-6 grid gap-px overflow-hidden rounded-lg border border-surface-muted bg-surface-muted sm:grid-cols-2"
                 >
-                    <div class="rounded-xl bg-surface px-4 py-3">
+                    <div class="bg-white px-4 py-4">
                         <dt class="text-xs font-semibold uppercase tracking-[0.14em] text-ink-muted">
                             Competition date
                         </dt>
@@ -430,7 +430,7 @@ const formatParticipantName = (participant: Participant) =>
                         </dd>
                     </div>
 
-                    <div class="rounded-xl bg-surface px-4 py-3">
+                    <div class="bg-white px-4 py-4">
                         <dt class="text-xs font-semibold uppercase tracking-[0.14em] text-ink-muted">
                             Registration deadline
                         </dt>
@@ -439,7 +439,7 @@ const formatParticipantName = (participant: Participant) =>
                         </dd>
                     </div>
 
-                    <div class="rounded-xl bg-surface px-4 py-3">
+                    <div class="bg-white px-4 py-4">
                         <dt class="text-xs font-semibold uppercase tracking-[0.14em] text-ink-muted">
                             Warm-up time
                         </dt>
@@ -448,7 +448,7 @@ const formatParticipantName = (participant: Participant) =>
                         </dd>
                     </div>
 
-                    <div class="rounded-xl bg-surface px-4 py-3">
+                    <div class="bg-white px-4 py-4">
                         <dt class="text-xs font-semibold uppercase tracking-[0.14em] text-ink-muted">
                             Coaches meeting
                         </dt>
@@ -457,7 +457,7 @@ const formatParticipantName = (participant: Participant) =>
                         </dd>
                     </div>
 
-                    <div class="rounded-xl bg-surface px-4 py-3 sm:col-span-2">
+                    <div class="bg-white px-4 py-4 sm:col-span-2">
                         <dt class="text-xs font-semibold uppercase tracking-[0.14em] text-ink-muted">
                             Entry fee
                         </dt>
@@ -473,7 +473,7 @@ const formatParticipantName = (participant: Participant) =>
                     <div class="flex flex-col gap-4 sm:flex-row sm:items-end sm:justify-between">
                         <div>
                             <div class="sm-label">Entries</div>
-                            <h3 class="mt-1 text-xl font-bold text-ink">
+                            <h3 class="mt-1 text-xl font-semibold text-ink">
                                 Participants
                             </h3>
                             <p class="mt-1 text-sm text-ink-muted">
@@ -610,7 +610,7 @@ const formatParticipantName = (participant: Participant) =>
                     <div class="flex flex-col gap-4 sm:flex-row sm:items-end sm:justify-between">
                         <div>
                             <div class="sm-label">Program</div>
-                            <h3 class="mt-1 text-xl font-bold text-ink">
+                            <h3 class="mt-1 text-xl font-semibold text-ink">
                                 Events
                             </h3>
                             <p class="mt-1 text-sm text-ink-muted">
@@ -768,7 +768,7 @@ const formatParticipantName = (participant: Participant) =>
                 <div class="flex flex-col gap-4 sm:flex-row sm:items-end sm:justify-between">
                     <div>
                         <div class="sm-label">Meet structure</div>
-                        <h3 class="mt-1 text-xl font-bold text-ink">
+                        <h3 class="mt-1 text-xl font-semibold text-ink">
                             Classifications
                         </h3>
                         <p class="mt-1 text-sm text-ink-muted">

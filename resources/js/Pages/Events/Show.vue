@@ -61,29 +61,27 @@ const formatShortDate = (value: string) =>
     <Head :title="event.name" />
 
     <AuthenticatedLayout>
-        <div class="space-y-6">
-            <div>
+        <div class="mx-auto max-w-7xl space-y-6">
+            <div class="border-b border-surface-muted pb-7">
                 <Link
                     :href="route('competitions.show', competition.id)"
-                    class="text-sm font-medium text-ink-muted transition hover:text-ink"
+                    class="inline-flex text-sm font-medium text-ink-muted transition hover:text-pool"
                 >
                     ← Back to {{ competition.name }}
                 </Link>
-                <div class="sm-label mt-4">Event</div>
-                <h2 class="sm-heading mt-1">{{ event.name }}</h2>
-                <p class="mt-2 text-sm text-ink-muted">
-                    {{ formatGender(event.gender) }}
-                </p>
-                <p class="mt-1 text-sm text-ink">
-                    {{ formatEligibilitySummary(event) }}
-                </p>
+                <div class="sm-label mt-5">Race event</div>
+                <h2 class="sm-heading mt-2">{{ event.name }}</h2>
+                <div class="mt-3 flex flex-wrap items-center gap-2 text-sm">
+                    <span class="rounded-full bg-mint-soft px-3 py-1 font-semibold text-pool">{{ formatGender(event.gender) }}</span>
+                    <span class="text-ink-muted">{{ formatEligibilitySummary(event) }}</span>
+                </div>
             </div>
 
             <div class="sm-card">
                 <div class="flex flex-col gap-4 sm:flex-row sm:items-end sm:justify-between">
                     <div>
                         <div class="sm-label">Entries</div>
-                        <h3 class="mt-1 text-xl font-bold text-ink">
+                        <h3 class="mt-1 text-xl font-semibold text-ink">
                             Participants
                         </h3>
                         <p class="mt-1 text-sm text-ink-muted">

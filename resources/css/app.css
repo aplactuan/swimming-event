@@ -6,31 +6,35 @@
     body {
         @apply bg-surface font-sans text-ink antialiased;
     }
+
+    ::selection {
+        @apply bg-aqua-soft text-pool-deep;
+    }
 }
 
 @layer components {
     .sm-card {
-        @apply rounded-card bg-surface-card p-6 shadow-card;
+        @apply rounded-card border border-surface-muted bg-surface-card p-5 shadow-card sm:p-6;
     }
 
     .sm-label {
-        @apply text-xs font-semibold uppercase tracking-[0.16em] text-ink-muted;
+        @apply text-[11px] font-semibold uppercase tracking-[0.18em] text-ink-muted;
     }
 
     .sm-heading {
-        @apply text-3xl font-bold tracking-tight text-ink md:text-4xl;
+        @apply text-3xl font-semibold tracking-[-0.025em] text-ink md:text-[2.5rem] md:leading-tight;
     }
 
     .sm-input {
-        @apply rounded-xl border-surface-muted bg-white text-ink shadow-none placeholder:text-ink-faint focus:border-aqua focus:ring-aqua;
+        @apply rounded-lg border-surface-muted bg-white text-sm text-ink shadow-none placeholder:text-ink-faint focus:border-pool-muted focus:ring-pool-muted/20;
     }
 
     .sm-btn-primary {
-        @apply inline-flex items-center justify-center gap-2 rounded-full bg-aqua px-5 py-2.5 text-sm font-semibold text-pool transition hover:bg-aqua-deep focus:outline-none focus:ring-2 focus:ring-aqua focus:ring-offset-2 disabled:opacity-40;
+        @apply inline-flex items-center justify-center gap-2 rounded-lg bg-pool px-4 py-2.5 text-sm font-semibold text-white transition hover:bg-pool-soft focus:outline-none focus:ring-2 focus:ring-pool/20 focus:ring-offset-2 disabled:cursor-not-allowed disabled:opacity-40;
     }
 
     .sm-btn-secondary {
-        @apply inline-flex items-center justify-center gap-2 rounded-full border border-surface-muted bg-white px-5 py-2.5 text-sm font-semibold text-ink transition hover:bg-surface focus:outline-none focus:ring-2 focus:ring-pool/20 focus:ring-offset-2;
+        @apply inline-flex items-center justify-center gap-2 rounded-lg border border-surface-muted bg-white px-4 py-2.5 text-sm font-semibold text-ink transition hover:border-ink-faint hover:bg-surface focus:outline-none focus:ring-2 focus:ring-pool/20 focus:ring-offset-2 disabled:cursor-not-allowed disabled:opacity-40;
     }
 
     /**

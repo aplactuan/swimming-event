@@ -4,11 +4,13 @@ import { computed, onMounted, onUnmounted, ref } from 'vue';
 const props = withDefaults(
     defineProps<{
         align?: 'left' | 'right';
+        placement?: 'bottom' | 'top';
         width?: '48';
         contentClasses?: string;
     }>(),
     {
         align: 'right',
+        placement: 'bottom',
         width: '48',
         contentClasses: 'py-1 bg-white',
     },
@@ -31,13 +33,19 @@ const widthClass = computed(() => {
 
 const alignmentClasses = computed(() => {
     if (props.align === 'left') {
-        return 'ltr:origin-top-left rtl:origin-top-right start-0';
-    } else if (props.align === 'right') {
-        return 'ltr:origin-top-right rtl:origin-top-left end-0';
-    } else {
-        return 'origin-top';
+        return props.placement === 'top'
+            ? 'ltr:origin-bottom-left rtl:origin-bottom-right start-0'
+            : 'ltr:origin-top-left rtl:origin-top-right start-0';
     }
+
+    return props.placement === 'top'
+        ? 'ltr:origin-bottom-right rtl:origin-bottom-left end-0'
+        : 'ltr:origin-top-right rtl:origin-top-left end-0';
 });
+
+const placementClasses = computed(() =>
+    props.placement === 'top' ? 'bottom-full mb-2' : 'top-full mt-2',
+);
 
 const open = ref(false);
 </script>
@@ -65,13 +73,13 @@ const open = ref(false);
         >
             <div
                 v-show="open"
-                class="absolute z-50 mt-2 rounded-2xl shadow-card"
-                :class="[widthClass, alignmentClasses]"
+                class="absolute z-50 rounded-lg shadow-card"
+                :class="[widthClass, alignmentClasses, placementClasses]"
                 style="display: none"
                 @click="open = false"
             >
                 <div
-                    class="rounded-2xl border border-surface-muted bg-white"
+                    class="overflow-hidden rounded-lg border border-surface-muted bg-white"
                     :class="contentClasses"
                 >
                     <slot name="content" />
