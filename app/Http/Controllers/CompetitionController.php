@@ -2,17 +2,21 @@
 
 namespace App\Http\Controllers;
 
+use App\Enums\EventGender;
 use App\Http\Requests\StoreCompetitionRequest;
 use App\Http\Requests\UpdateCompetitionRequest;
 use App\Http\Resources\CompetitionResource;
 use App\Http\Resources\EventResource;
 use App\Http\Resources\ParticipantResource;
+use App\Models\AgeBracket;
 use App\Models\Competition;
 use App\Models\Event;
 use App\Models\Participant;
+use Illuminate\Database\Eloquent\Builder;
 use Illuminate\Http\RedirectResponse;
 use Illuminate\Http\Request;
 use Illuminate\Pagination\LengthAwarePaginator;
+use Illuminate\Validation\Rule;
 use Inertia\Inertia;
 use Inertia\Response;
 
@@ -27,11 +31,17 @@ class CompetitionController extends Controller
     {
         $validated = $request->validate([
             'participant_search' => ['sometimes', 'nullable', 'string', 'max:100'],
-            'event_search' => ['sometimes', 'nullable', 'string', 'max:100'],
+            'event_name' => ['sometimes', 'nullable', 'string', 'max:100'],
+            'event_classification' => ['sometimes', 'nullable', 'uuid'],
+            'event_age_bracket' => ['sometimes', 'nullable', 'string', 'max:100'],
+            'event_gender' => ['sometimes', 'nullable', Rule::enum(EventGender::class)],
         ]);
 
         $participantSearch = trim((string) ($validated['participant_search'] ?? ''));
-        $eventSearch = trim((string) ($validated['event_search'] ?? ''));
+        $eventName = trim((string) ($validated['event_name'] ?? ''));
+        $eventClassification = trim((string) ($validated['event_classification'] ?? ''));
+        $eventAgeBracket = trim((string) ($validated['event_age_bracket'] ?? ''));
+        $eventGender = trim((string) ($validated['event_gender'] ?? ''));
 
         $competition->load([
             'rootClassifications.ageBrackets',
@@ -50,7 +60,12 @@ class CompetitionController extends Controller
                 'eligibilities.ageBracket',
             ])
             ->withCount('participants')
-            ->searchByName($eventSearch)
+            ->ofName($eventName)
+            ->ofGender($eventGender)
+            ->eligibleFor([
+                'classification_id' => $eventClassification ?: null,
+                'age_bracket_name' => $eventAgeBracket ?: null,
+            ])
             ->paginate(self::LIST_PER_PAGE, ['*'], 'events_page')
             ->withQueryString();
 
@@ -59,9 +74,13 @@ class CompetitionController extends Controller
             'participants' => $this->paginatedPayload($participants, ParticipantResource::class),
             'events' => $this->paginatedPayload($events, EventResource::class),
             'event_names' => $this->distinctEventNames($competition),
+            'age_bracket_names' => $this->distinctAgeBracketNames($competition),
             'filters' => [
                 'participant_search' => $participantSearch,
-                'event_search' => $eventSearch,
+                'event_name' => $eventName,
+                'event_classification' => $eventClassification,
+                'event_age_bracket' => $eventAgeBracket,
+                'event_gender' => $eventGender,
             ],
         ]);
     }
@@ -114,6 +133,26 @@ class CompetitionController extends Controller
             ->select('name')
             ->groupBy('name')
             ->orderByRaw('min(sort_order)')
+            ->pluck('name')
+            ->all();
+    }
+
+    /**
+     * The competition's unique age bracket names, in their current display order.
+     *
+     * @return list<string>
+     */
+    private function distinctAgeBracketNames(Competition $competition): array
+    {
+        return AgeBracket::query()
+            ->whereHas(
+                'classification',
+                fn (Builder $classification): Builder => $classification->whereBelongsTo($competition),
+            )
+            ->select('name')
+            ->groupBy('name')
+            ->orderByRaw('min(sort_order)')
+            ->orderBy('name')
             ->pluck('name')
             ->all();
     }

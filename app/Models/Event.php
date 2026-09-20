@@ -76,17 +76,71 @@ class Event extends Model
     }
 
     /**
-     * Scope a query to events matching name.
+     * Scope a query to events with the given exact name.
      */
-    public function scopeSearchByName(Builder $query, ?string $search): Builder
+    public function scopeOfName(Builder $query, ?string $name): Builder
     {
-        $search = trim((string) $search);
+        $name = trim((string) $name);
 
-        if ($search === '') {
+        if ($name === '') {
             return $query;
         }
 
-        return $query->whereLike('name', '%'.$search.'%');
+        return $query->where('name', $name);
+    }
+
+    /**
+     * Scope a query to events of the given gender.
+     */
+    public function scopeOfGender(Builder $query, EventGender|string|null $gender): Builder
+    {
+        $gender = $gender instanceof EventGender ? $gender->value : trim((string) $gender);
+
+        if ($gender === '') {
+            return $query;
+        }
+
+        return $query->where('gender', $gender);
+    }
+
+    /**
+     * Scope a query to events with a single eligibility row satisfying every given filter.
+     *
+     * A classification filter also matches eligibilities on its child classifications,
+     * while an age bracket filter matches by name across classifications.
+     *
+     * @param  array{classification_id?: string|null, age_bracket_name?: string|null}  $filters
+     */
+    public function scopeEligibleFor(Builder $query, array $filters): Builder
+    {
+        $classificationId = $filters['classification_id'] ?? null;
+        $ageBracketName = $filters['age_bracket_name'] ?? null;
+
+        if ($classificationId === null && $ageBracketName === null) {
+            return $query;
+        }
+
+        return $query->whereHas(
+            'eligibilities',
+            function (Builder $eligibilities) use ($classificationId, $ageBracketName): void {
+                if ($classificationId !== null) {
+                    $eligibilities->where(fn (Builder $scoped): Builder => $scoped
+                        ->where('classification_id', $classificationId)
+                        ->orWhereHas(
+                            'classification',
+                            fn (Builder $classification): Builder => $classification
+                                ->where('parent_id', $classificationId),
+                        ));
+                }
+
+                if ($ageBracketName !== null) {
+                    $eligibilities->whereHas(
+                        'ageBracket',
+                        fn (Builder $ageBracket): Builder => $ageBracket->where('name', $ageBracketName),
+                    );
+                }
+            },
+        );
     }
 
     /**

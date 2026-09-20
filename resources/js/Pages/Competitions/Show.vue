@@ -32,9 +32,13 @@ const props = defineProps<{
     participants: Paginated<Participant>;
     events: Paginated<CompetitionEvent>;
     event_names: string[];
+    age_bracket_names: string[];
     filters: {
         participant_search: string;
-        event_search: string;
+        event_name: string;
+        event_classification: string;
+        event_age_bracket: string;
+        event_gender: string;
     };
 }>();
 
@@ -145,10 +149,8 @@ const reorderAgeBrackets = (classificationId: string, items: AgeBracket[]) => {
 };
 const detailsOpen = ref(false);
 const participantSearch = ref(props.filters.participant_search);
-const eventSearch = ref(props.filters.event_search);
 
 let participantSearchTimeout: ReturnType<typeof setTimeout> | null = null;
-let eventSearchTimeout: ReturnType<typeof setTimeout> | null = null;
 
 watch(
     () => props.filters.participant_search,
@@ -157,11 +159,61 @@ watch(
     },
 );
 
+const eventFilters = ref({
+    name: props.filters.event_name,
+    classification: props.filters.event_classification,
+    ageBracket: props.filters.event_age_bracket,
+    gender: props.filters.event_gender,
+});
+
 watch(
-    () => props.filters.event_search,
-    (value) => {
-        eventSearch.value = value;
+    () => [
+        props.filters.event_name,
+        props.filters.event_classification,
+        props.filters.event_age_bracket,
+        props.filters.event_gender,
+    ],
+    ([name, classification, ageBracket, gender]) => {
+        eventFilters.value = { name, classification, ageBracket, gender };
     },
+);
+
+const rootClassifications = computed(() => props.competition.classifications ?? []);
+
+const genderOptions: { value: EventGender; label: string }[] = [
+    { value: 'male', label: 'Male' },
+    { value: 'female', label: 'Female' },
+    { value: 'mixed', label: 'Mixed' },
+];
+
+const ageBracketOptions = computed(() => {
+    const scoped: Classification[] = [];
+
+    for (const root of rootClassifications.value) {
+        const children = root.children ?? [];
+
+        if (eventFilters.value.classification) {
+            if (root.id === eventFilters.value.classification) {
+                scoped.push(root, ...children);
+            }
+
+            continue;
+        }
+
+        scoped.push(root, ...children);
+    }
+
+    const scopedNames = new Set(
+        scoped.flatMap((classification) =>
+            (classification.age_brackets ?? []).map((bracket) => bracket.name),
+        ),
+    );
+
+    return props.age_bracket_names.filter((name) => scopedNames.has(name));
+});
+
+const hasEventFilters = computed(() =>
+    Object.values(eventFilters.value).some((value) => value !== ''),
 );
 
 const visitLists = (
@@ -172,7 +224,10 @@ const visitLists = (
         route('competitions.show', props.competition.id),
         {
             participant_search: props.filters.participant_search || undefined,
-            event_search: props.filters.event_search || undefined,
+            event_name: props.filters.event_name || undefined,
+            event_classification: props.filters.event_classification || undefined,
+            event_age_bracket: props.filters.event_age_bracket || undefined,
+            event_gender: props.filters.event_gender || undefined,
             participants_page:
                 props.participants.meta.current_page > 1
                     ? props.participants.meta.current_page
@@ -212,25 +267,35 @@ watch(participantSearch, (value) => {
     }, 300);
 });
 
-watch(eventSearch, (value) => {
-    if (eventSearchTimeout) {
-        clearTimeout(eventSearchTimeout);
+const applyEventFilters = () => {
+    visitLists(
+        {
+            event_name: eventFilters.value.name || undefined,
+            event_classification: eventFilters.value.classification || undefined,
+            event_age_bracket: eventFilters.value.ageBracket || undefined,
+            event_gender: eventFilters.value.gender || undefined,
+            events_page: undefined,
+        },
+        ['events', 'filters'],
+    );
+};
+
+/**
+ * Drop an age bracket that the newly chosen classification no longer offers.
+ */
+const applyEventFiltersFromClassification = () => {
+    if (! ageBracketOptions.value.includes(eventFilters.value.ageBracket)) {
+        eventFilters.value.ageBracket = '';
     }
 
-    eventSearchTimeout = setTimeout(() => {
-        if (value === props.filters.event_search) {
-            return;
-        }
+    applyEventFilters();
+};
 
-        visitLists(
-            {
-                event_search: value || undefined,
-                events_page: undefined,
-            },
-            ['events', 'filters'],
-        );
-    }, 300);
-});
+const clearEventFilters = () => {
+    eventFilters.value = { name: '', classification: '', ageBracket: '', gender: '' };
+
+    applyEventFilters();
+};
 
 const goToParticipantsPage = (page: number) => {
     if (page < 1 || page > props.participants.meta.last_page || page === props.participants.meta.current_page) {
@@ -643,22 +708,95 @@ const formatParticipantName = (participant: Participant) =>
                         </div>
                     </div>
 
-                    <div class="mt-4">
-                        <label class="sr-only" for="event-search">
-                            Search events
-                        </label>
-                        <input
-                            id="event-search"
-                            v-model="eventSearch"
-                            type="search"
-                            class="sm-input block w-full"
-                            placeholder="Search by event name"
-                            autocomplete="off"
-                        />
+                    <div class="mt-4 grid gap-3 sm:grid-cols-2">
+                        <div>
+                            <label class="sm-label" for="event-filter-name">Name</label>
+                            <select
+                                id="event-filter-name"
+                                v-model="eventFilters.name"
+                                class="sm-input mt-1 block w-full"
+                                @change="applyEventFilters"
+                            >
+                                <option value="">All names</option>
+                                <option
+                                    v-for="name in event_names"
+                                    :key="name"
+                                    :value="name"
+                                >
+                                    {{ name }}
+                                </option>
+                            </select>
+                        </div>
+
+                        <div>
+                            <label class="sm-label" for="event-filter-classification">
+                                Classification
+                            </label>
+                            <select
+                                id="event-filter-classification"
+                                v-model="eventFilters.classification"
+                                class="sm-input mt-1 block w-full"
+                                @change="applyEventFiltersFromClassification"
+                            >
+                                <option value="">All classifications</option>
+                                <option
+                                    v-for="classification in rootClassifications"
+                                    :key="classification.id"
+                                    :value="classification.id"
+                                >
+                                    {{ classification.name }}
+                                </option>
+                            </select>
+                        </div>
+
+                        <div>
+                            <label class="sm-label" for="event-filter-gender">
+                                Gender
+                            </label>
+                            <select
+                                id="event-filter-gender"
+                                v-model="eventFilters.gender"
+                                class="sm-input mt-1 block w-full"
+                                @change="applyEventFilters"
+                            >
+                                <option value="">All genders</option>
+                                <option
+                                    v-for="option in genderOptions"
+                                    :key="option.value"
+                                    :value="option.value"
+                                >
+                                    {{ option.label }}
+                                </option>
+                            </select>
+                        </div>
+
+                        <div>
+                            <label class="sm-label" for="event-filter-age-bracket">
+                                Age bracket
+                            </label>
+                            <select
+                                id="event-filter-age-bracket"
+                                v-model="eventFilters.ageBracket"
+                                class="sm-input mt-1 block w-full"
+                                :disabled="ageBracketOptions.length === 0"
+                                @change="applyEventFilters"
+                            >
+                                <option value="">
+                                    {{ ageBracketOptions.length === 0 ? 'No age brackets' : 'All age brackets' }}
+                                </option>
+                                <option
+                                    v-for="name in ageBracketOptions"
+                                    :key="name"
+                                    :value="name"
+                                >
+                                    {{ name }}
+                                </option>
+                            </select>
+                        </div>
                     </div>
 
                     <div
-                        v-if="events.meta.total === 0 && ! filters.event_search"
+                        v-if="events.meta.total === 0 && ! hasEventFilters"
                         class="mt-6 rounded-xl bg-surface px-4 py-6 text-sm text-ink-muted"
                     >
                         No events yet.
@@ -668,7 +806,14 @@ const formatParticipantName = (participant: Participant) =>
                         v-else-if="events.data.length === 0"
                         class="mt-6 rounded-xl bg-surface px-4 py-6 text-sm text-ink-muted"
                     >
-                        No events match “{{ filters.event_search }}”.
+                        <p>No events match the selected filters.</p>
+                        <button
+                            type="button"
+                            class="mt-3 text-sm font-semibold text-pool hover:underline"
+                            @click="clearEventFilters"
+                        >
+                            Clear filters
+                        </button>
                     </div>
 
                     <template v-else>

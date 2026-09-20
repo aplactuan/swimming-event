@@ -2,6 +2,9 @@
 
 namespace Tests\Feature;
 
+use App\Enums\EventGender;
+use App\Models\AgeBracket;
+use App\Models\Classification;
 use App\Models\Competition;
 use App\Models\Event;
 use App\Models\Participant;
@@ -60,7 +63,11 @@ class CompetitionShowTest extends TestCase
                 ->has('events.data', 0)
                 ->where('events.meta.total', 0)
                 ->where('filters.participant_search', '')
-                ->where('filters.event_search', ''));
+                ->where('filters.event_name', '')
+                ->where('filters.event_classification', '')
+                ->where('filters.event_age_bracket', '')
+                ->where('filters.event_gender', '')
+                ->has('age_bracket_names', 0));
     }
 
     public function test_participants_and_events_are_paginated(): void
@@ -132,7 +139,7 @@ class CompetitionShowTest extends TestCase
                 ->where('filters.participant_search', 'santos'));
     }
 
-    public function test_events_can_be_searched_and_paginated(): void
+    public function test_events_can_be_filtered_by_name(): void
     {
         $user = User::factory()->create();
         $competition = Competition::factory()->create();
@@ -153,7 +160,7 @@ class CompetitionShowTest extends TestCase
             ->actingAs($user)
             ->get(route('competitions.show', [
                 'competition' => $competition,
-                'event_search' => 'free',
+                'event_name' => '50m Freestyle',
             ]));
 
         $response
@@ -163,7 +170,124 @@ class CompetitionShowTest extends TestCase
                 ->has('events.data', 1)
                 ->where('events.data.0.name', '50m Freestyle')
                 ->where('events.meta.total', 1)
-                ->where('filters.event_search', 'free'));
+                ->where('filters.event_name', '50m Freestyle'));
+    }
+
+    public function test_events_can_be_filtered_by_classification_age_bracket_and_gender(): void
+    {
+        $user = User::factory()->create();
+        $competition = Competition::factory()->create();
+
+        $novice = Classification::factory()->create([
+            'competition_id' => $competition->id,
+            'name' => 'Novice',
+        ]);
+
+        $juniors = Classification::factory()
+            ->childOf($novice)
+            ->create(['name' => 'Juniors']);
+
+        $developmental = Classification::factory()->create([
+            'competition_id' => $competition->id,
+            'name' => 'Developmental',
+        ]);
+
+        $juniorsBracket = AgeBracket::factory()->create([
+            'classification_id' => $juniors->id,
+            'name' => '7 - 10',
+        ]);
+
+        $developmentalBracket = AgeBracket::factory()->create([
+            'classification_id' => $developmental->id,
+            'name' => '6 and below',
+        ]);
+
+        $matching = Event::factory()->create([
+            'competition_id' => $competition->id,
+            'name' => '50m Freestyle',
+            'gender' => EventGender::Female,
+            'sort_order' => 1,
+        ]);
+
+        $matching->eligibilities()->create([
+            'classification_id' => $juniors->id,
+            'age_bracket_id' => $juniorsBracket->id,
+        ]);
+
+        $wrongGender = Event::factory()->create([
+            'competition_id' => $competition->id,
+            'name' => '50m Freestyle',
+            'gender' => EventGender::Male,
+            'sort_order' => 2,
+        ]);
+
+        $wrongGender->eligibilities()->create([
+            'classification_id' => $juniors->id,
+            'age_bracket_id' => $juniorsBracket->id,
+        ]);
+
+        $other = Event::factory()->create([
+            'competition_id' => $competition->id,
+            'name' => '100m Breaststroke',
+            'gender' => EventGender::Female,
+            'sort_order' => 3,
+        ]);
+
+        $other->eligibilities()->create([
+            'classification_id' => $developmental->id,
+            'age_bracket_id' => $developmentalBracket->id,
+        ]);
+
+        $response = $this
+            ->actingAs($user)
+            ->get(route('competitions.show', [
+                'competition' => $competition,
+                'event_classification' => $novice->id,
+                'event_age_bracket' => '7 - 10',
+                'event_gender' => 'female',
+            ]));
+
+        $response
+            ->assertOk()
+            ->assertInertia(fn (Assert $page) => $page
+                ->component('Competitions/Show')
+                ->has('events.data', 1)
+                ->where('events.data.0.id', $matching->id)
+                ->where('events.meta.total', 1)
+                ->where('filters.event_classification', $novice->id)
+                ->where('filters.event_age_bracket', '7 - 10')
+                ->where('filters.event_gender', 'female')
+                ->where('age_bracket_names', ['6 and below', '7 - 10']));
+    }
+
+    public function test_the_competition_page_rejects_an_unknown_gender_filter(): void
+    {
+        $user = User::factory()->create();
+        $competition = Competition::factory()->create();
+
+        $response = $this
+            ->actingAs($user)
+            ->get(route('competitions.show', [
+                'competition' => $competition,
+                'event_gender' => 'nonbinary-team',
+            ]));
+
+        $response->assertSessionHasErrors('event_gender');
+    }
+
+    public function test_the_competition_page_rejects_a_non_uuid_classification_filter(): void
+    {
+        $user = User::factory()->create();
+        $competition = Competition::factory()->create();
+
+        $response = $this
+            ->actingAs($user)
+            ->get(route('competitions.show', [
+                'competition' => $competition,
+                'event_classification' => 'not-a-uuid',
+            ]));
+
+        $response->assertSessionHasErrors('event_classification');
     }
 
     public function test_viewing_a_missing_competition_returns_not_found(): void
