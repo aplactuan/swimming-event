@@ -15,6 +15,23 @@ class SwimmingCompetitionSeederTest extends TestCase
 {
     use RefreshDatabase;
 
+    public function test_the_default_seeder_computes_participant_ages(): void
+    {
+        $this->seed();
+
+        $competition = Competition::query()->sole();
+
+        $this->assertSame(100, $competition->participants()->count());
+        $this->assertGreaterThan(0, $competition->participants()->where('age', '>', 0)->count());
+
+        $competition->participants->each(function ($participant) use ($competition): void {
+            $this->assertSame(
+                max(0, (int) $participant->birthdate->diffInYears($competition->competition_date)),
+                $participant->age,
+            );
+        });
+    }
+
     public function test_it_seeds_the_competition_structure_and_participants(): void
     {
         Carbon::setTestNow('2026-09-17 12:00:00');
@@ -33,6 +50,15 @@ class SwimmingCompetitionSeederTest extends TestCase
             $this->assertSame(100, $competition->entry_fee);
             $this->assertCount(2, $competition->classifications);
             $this->assertSame(100, $competition->participants()->count());
+            $this->assertSame(100, $competition->participants()->whereBetween('age', [0, 10])->count());
+            $this->assertGreaterThan(0, $competition->participants()->where('age', '>', 0)->count());
+
+            $competition->participants->each(function ($participant) use ($competition): void {
+                $this->assertSame(
+                    max(0, (int) $participant->birthdate->diffInYears($competition->competition_date)),
+                    $participant->age,
+                );
+            });
 
             $expectedGroups = [
                 'Novice' => [
