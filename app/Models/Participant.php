@@ -3,8 +3,10 @@
 namespace App\Models;
 
 use App\Enums\ParticipantGender;
+use App\Observers\ParticipantObserver;
 use Database\Factories\ParticipantFactory;
 use Illuminate\Database\Eloquent\Attributes\Fillable;
+use Illuminate\Database\Eloquent\Attributes\ObservedBy;
 use Illuminate\Database\Eloquent\Builder;
 use Illuminate\Database\Eloquent\Concerns\HasUuids;
 use Illuminate\Database\Eloquent\Factories\HasFactory;
@@ -20,8 +22,10 @@ use Illuminate\Database\Eloquent\Relations\BelongsToMany;
     'gender',
     'team',
     'birthdate',
+    'age',
     'paid',
 ])]
+#[ObservedBy([ParticipantObserver::class])]
 class Participant extends Model
 {
     /** @use HasFactory<ParticipantFactory> */
@@ -33,6 +37,7 @@ class Participant extends Model
      * @var array<string, mixed>
      */
     protected $attributes = [
+        'age' => 0,
         'paid' => false,
     ];
 
@@ -58,6 +63,22 @@ class Participant extends Model
     public function events(): BelongsToMany
     {
         return $this->belongsToMany(Event::class)->withTimestamps();
+    }
+
+    /**
+     * Calculate the participant's age on the day of the competition.
+     */
+    public function ageOnCompetitionDay(): int
+    {
+        $competitionDate = Competition::query()
+            ->whereKey($this->competition_id)
+            ->value('competition_date');
+
+        if ($this->birthdate === null || $competitionDate === null) {
+            return 0;
+        }
+
+        return max(0, (int) $this->birthdate->diffInYears($competitionDate));
     }
 
     /**
@@ -92,6 +113,7 @@ class Participant extends Model
         return [
             'gender' => ParticipantGender::class,
             'birthdate' => 'date',
+            'age' => 'integer',
             'paid' => 'boolean',
         ];
     }

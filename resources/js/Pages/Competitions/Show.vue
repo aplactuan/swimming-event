@@ -614,6 +614,7 @@ const formatParticipantName = (participant: Participant) =>
                                             {{ formatGender(participant.gender) }}
                                             · {{ participant.team }}
                                             · {{ formatShortDate(participant.birthdate) }}
+                                            · {{ participant.age }} yrs
                                             · {{ participant.classification?.name ?? 'Unknown class' }}
                                             · {{ participant.paid ? 'Paid' : 'Unpaid' }}
                                         </p>

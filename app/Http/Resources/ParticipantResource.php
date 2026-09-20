@@ -25,6 +25,7 @@ class ParticipantResource extends JsonResource
             'gender' => $this->gender->value,
             'team' => $this->team,
             'birthdate' => $this->birthdate->toDateString(),
+            'age' => $this->age,
             'classification_id' => $this->classification_id,
             'paid' => $this->paid,
             'classification' => $this->whenLoaded(

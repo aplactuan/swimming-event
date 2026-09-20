@@ -333,6 +333,25 @@ class ParticipantTest extends TestCase
                 ->where('competition.participants.0.classification.name', 'Novice'));
     }
 
+    public function test_created_participants_get_their_age_on_competition_day(): void
+    {
+        $user = User::factory()->create();
+        $competition = Competition::factory()->create([
+            'competition_date' => '2026-06-01',
+        ]);
+        $classification = Classification::factory()->create([
+            'competition_id' => $competition->id,
+        ]);
+
+        $this
+            ->actingAs($user)
+            ->post(route('participants.store', $competition), $this->validPayload($classification, [
+                'birthdate' => '2015-06-15',
+            ]));
+
+        $this->assertSame(10, Participant::query()->firstOrFail()->age);
+    }
+
     /**
      * @return array{0: Competition, 1: Classification, 2: AgeBracket}
      */
