@@ -9,6 +9,7 @@ use App\Models\Classification;
 use App\Models\Competition;
 use App\Models\Event;
 use App\Models\EventEligibility;
+use App\Models\Heat;
 use App\Models\Participant;
 use App\Models\User;
 use Illuminate\Foundation\Testing\RefreshDatabase;
@@ -57,6 +58,38 @@ class EventShowTest extends TestCase
                 ->where('event.participants.0.id', $participant->id)
                 ->where('event.participants.0.first_name', 'Ada')
                 ->has('competition.participants', 1));
+    }
+
+    public function test_the_event_page_includes_heats_with_their_lanes(): void
+    {
+        $user = User::factory()->create();
+        [$competition, $event, $classification] = $this->competitionWithEvent();
+        $competition->update(['number_of_lane' => 3]);
+
+        $participant = Participant::factory()->paid()->create([
+            'competition_id' => $competition->id,
+            'classification_id' => $classification->id,
+            'first_name' => 'Ada',
+            'last_name' => 'Lovelace',
+        ]);
+        $heat = Heat::factory()->withLanes(3)->create(['event_id' => $event->id]);
+        $heat->assignLane(2, $participant);
+
+        $this
+            ->actingAs($user)
+            ->get(route('events.show', [$competition, $event]))
+            ->assertOk()
+            ->assertInertia(fn (Assert $page) => $page
+                ->component('Events/Show')
+                ->where('competition.number_of_lane', 3)
+                ->has('event.heats', 1)
+                ->where('event.heats.0.heat_number', 1)
+                ->has('event.heats.0.lanes', 3)
+                ->where('event.heats.0.lanes.0.lane_number', 1)
+                ->where('event.heats.0.lanes.0.participant', null)
+                ->where('event.heats.0.lanes.1.participant_id', $participant->id)
+                ->where('event.heats.0.lanes.1.participant.first_name', 'Ada')
+                ->where('event.heats.0.lanes.1.finish_time', null));
     }
 
     public function test_event_is_scoped_to_its_competition(): void

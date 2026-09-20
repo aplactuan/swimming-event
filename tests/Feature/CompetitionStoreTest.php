@@ -41,6 +41,36 @@ class CompetitionStoreTest extends TestCase
         $this->assertSame('08:00', $competition->coaches_meeting_time);
         $this->assertSame('2026-09-01', $competition->registration_deadline->toDateString());
         $this->assertSame(2500, $competition->entry_fee);
+        $this->assertSame(8, $competition->number_of_lane);
+    }
+
+    public function test_number_of_lane_defaults_to_five_when_omitted(): void
+    {
+        $user = User::factory()->create();
+        $payload = $this->validPayload();
+        unset($payload['number_of_lane']);
+
+        $this
+            ->actingAs($user)
+            ->post(route('competitions.store'), $payload)
+            ->assertSessionHasNoErrors();
+
+        $this->assertSame(5, Competition::query()->firstOrFail()->number_of_lane);
+    }
+
+    public function test_number_of_lane_must_be_a_positive_integer(): void
+    {
+        $user = User::factory()->create();
+
+        $this
+            ->actingAs($user)
+            ->from(route('dashboard'))
+            ->post(route('competitions.store'), $this->validPayload([
+                'number_of_lane' => 0,
+            ]))
+            ->assertSessionHasErrors('number_of_lane');
+
+        $this->assertDatabaseCount('competitions', 0);
     }
 
     public function test_warm_up_and_coaches_meeting_times_are_optional(): void
@@ -106,6 +136,7 @@ class CompetitionStoreTest extends TestCase
         return [
             'name' => 'Summer Sprint Meet',
             'venue' => 'City Aquatic Centre',
+            'number_of_lane' => 8,
             'competition_date' => '2026-09-15',
             'warm_up_time' => '07:30',
             'coaches_meeting_time' => '08:00',

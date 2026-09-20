@@ -37,6 +37,7 @@ class CompetitionUpdateTest extends TestCase
                 'name' => 'Updated Sprint Meet',
                 'venue' => 'National Aquatic Centre',
                 'entry_fee' => 3000,
+                'number_of_lane' => 10,
             ]));
 
         $response
@@ -52,6 +53,7 @@ class CompetitionUpdateTest extends TestCase
         $this->assertSame('08:00', $competition->coaches_meeting_time);
         $this->assertSame('2026-09-01', $competition->registration_deadline->toDateString());
         $this->assertSame(3000, $competition->entry_fee);
+        $this->assertSame(10, $competition->number_of_lane);
     }
 
     public function test_competition_update_requires_valid_attributes(): void

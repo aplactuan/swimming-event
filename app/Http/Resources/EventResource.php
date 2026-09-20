@@ -32,6 +32,10 @@ class EventResource extends JsonResource
                 fn () => ParticipantResource::collection($this->participants)->resolve(),
             ),
             'participants_count' => $this->whenCounted('participants'),
+            'heats' => $this->whenLoaded(
+                'heats',
+                fn () => HeatResource::collection($this->heats)->resolve(),
+            ),
         ];
     }
 }

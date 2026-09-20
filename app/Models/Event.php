@@ -12,6 +12,7 @@ use Illuminate\Database\Eloquent\Model;
 use Illuminate\Database\Eloquent\Relations\BelongsTo;
 use Illuminate\Database\Eloquent\Relations\BelongsToMany;
 use Illuminate\Database\Eloquent\Relations\HasMany;
+use Illuminate\Database\Eloquent\Relations\HasManyThrough;
 
 #[Fillable([
     'competition_id',
@@ -62,6 +63,22 @@ class Event extends Model
     public function eligibilities(): HasMany
     {
         return $this->hasMany(EventEligibility::class);
+    }
+
+    /**
+     * Get the heats for the event, in swim order.
+     */
+    public function heats(): HasMany
+    {
+        return $this->hasMany(Heat::class)->orderBy('heat_number');
+    }
+
+    /**
+     * Get every lane across the event's heats.
+     */
+    public function heatLanes(): HasManyThrough
+    {
+        return $this->hasManyThrough(HeatLane::class, Heat::class);
     }
 
     /**

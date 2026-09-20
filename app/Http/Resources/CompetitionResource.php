@@ -22,6 +22,7 @@ class CompetitionResource extends JsonResource
             'id' => $this->id,
             'name' => $this->name,
             'venue' => $this->venue,
+            'number_of_lane' => $this->number_of_lane,
             'competition_date' => $this->competition_date->toDateString(),
             'warm_up_time' => $this->formatTime($this->warm_up_time),
             'coaches_meeting_time' => $this->formatTime($this->coaches_meeting_time),

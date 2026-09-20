@@ -13,6 +13,7 @@ use Illuminate\Database\Eloquent\Relations\HasMany;
 #[Fillable([
     'name',
     'venue',
+    'number_of_lane',
     'competition_date',
     'warm_up_time',
     'coaches_meeting_time',
@@ -23,6 +24,15 @@ class Competition extends Model
 {
     /** @use HasFactory<CompetitionFactory> */
     use HasFactory, HasUuids;
+
+    /**
+     * The model's default values for attributes.
+     *
+     * @var array<string, mixed>
+     */
+    protected $attributes = [
+        'number_of_lane' => 5,
+    ];
 
     /**
      * Get all classifications for the competition.
@@ -82,6 +92,7 @@ class Competition extends Model
             'competition_date' => 'date',
             'registration_deadline' => 'date',
             'entry_fee' => 'integer',
+            'number_of_lane' => 'integer',
         ];
     }
 }
