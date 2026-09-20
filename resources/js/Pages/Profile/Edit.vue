@@ -15,25 +15,26 @@ defineProps<{
     <Head title="Profile" />
 
     <AuthenticatedLayout>
-        <div class="mx-auto max-w-4xl space-y-6">
-            <div>
+        <div class="mx-auto max-w-5xl space-y-6">
+            <div class="border-b border-surface-muted pb-7">
                 <div class="sm-label">Account</div>
-                <h2 class="sm-heading mt-1">Profile</h2>
+                <h2 class="sm-heading mt-2">Account settings</h2>
                 <p class="mt-2 text-sm text-ink-muted">
-                    Manage your coach identity, password, and account access.
+                    Manage your profile, password, and account access.
                 </p>
             </div>
 
-            <div class="sm-card">
-                <UpdateProfileInformationForm
-                    :must-verify-email="mustVerifyEmail"
-                    :status="status"
-                    class="max-w-xl"
-                />
-            </div>
+            <div class="grid gap-6 lg:grid-cols-2 lg:items-start">
+                <div class="sm-card">
+                    <UpdateProfileInformationForm
+                        :must-verify-email="mustVerifyEmail"
+                        :status="status"
+                    />
+                </div>
 
-            <div class="sm-card">
-                <UpdatePasswordForm class="max-w-xl" />
+                <div class="sm-card">
+                    <UpdatePasswordForm />
+                </div>
             </div>
 
             <div class="sm-card">

@@ -37,11 +37,14 @@ const openDeleteCompetitionModal = (competition: Competition) => {
     <AuthenticatedLayout>
         <div class="mx-auto max-w-7xl space-y-8">
             <div
-                class="flex flex-col gap-4 sm:flex-row sm:items-end sm:justify-between"
+                class="flex flex-col gap-5 border-b border-surface-muted pb-7 sm:flex-row sm:items-end sm:justify-between"
             >
                 <div>
-                    <div class="sm-label">All competition</div>
-                    <h2 class="sm-heading mt-1">Meet command center</h2>
+                    <div class="sm-label">Competition workspace</div>
+                    <h2 class="sm-heading mt-2">Your competitions</h2>
+                    <p class="mt-2 max-w-2xl text-sm leading-6 text-ink-muted">
+                        Set up each meet, manage swimmers, and prepare the race program.
+                    </p>
                 </div>
 
                 <button
@@ -57,21 +60,21 @@ const openDeleteCompetitionModal = (competition: Competition) => {
                             stroke-linecap="round"
                         />
                     </svg>
-                    New competition
+                    Create competition
                 </button>
             </div>
 
             <section class="space-y-4">
-                <div>
-                    <div class="sm-label">Schedule</div>
-                    <h3 class="mt-1 text-2xl font-bold text-ink">
-                        Upcoming competitions
-                    </h3>
+                <div class="flex items-center justify-between gap-4">
+                    <h3 class="text-base font-semibold text-ink">Upcoming</h3>
+                    <span v-if="competitions.length > 0" class="text-sm text-ink-muted">
+                        {{ competitions.length }} {{ competitions.length === 1 ? 'competition' : 'competitions' }}
+                    </span>
                 </div>
 
                 <div
                     v-if="competitions.length > 0"
-                    class="grid gap-4 sm:grid-cols-2 xl:grid-cols-3"
+                    class="grid gap-5 md:grid-cols-2 xl:grid-cols-3"
                 >
                     <CompetitionCard
                         v-for="competition in competitions"
@@ -84,20 +87,20 @@ const openDeleteCompetitionModal = (competition: Competition) => {
 
                 <div
                     v-else
-                    class="sm-card border border-dashed border-surface-muted text-center"
+                    class="rounded-card border border-dashed border-ink-faint/50 bg-white px-6 py-14 text-center"
                 >
                     <p class="text-lg font-semibold text-ink">
-                        No upcoming competitions
+                        No competitions scheduled
                     </p>
                     <p class="mt-1 text-sm text-ink-muted">
-                        Create a meet to start building your schedule.
+                        Create your first competition to begin setting up events and entries.
                     </p>
                     <button
                         type="button"
                         class="sm-btn-primary mt-4"
                         @click="openCreateCompetitionModal"
                     >
-                        New competition
+                        Create competition
                     </button>
                 </div>
             </section>
