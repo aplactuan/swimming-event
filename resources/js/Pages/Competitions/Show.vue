@@ -2,6 +2,7 @@
 import AuthenticatedLayout from '@/Layouts/AuthenticatedLayout.vue';
 import AgeBracketFormModal from '@/Pages/Competitions/Partials/AgeBracketFormModal.vue';
 import ClassificationFormModal from '@/Pages/Competitions/Partials/ClassificationFormModal.vue';
+import CloseCompetitionModal from '@/Pages/Competitions/Partials/CloseCompetitionModal.vue';
 import DeleteAgeBracketModal from '@/Pages/Competitions/Partials/DeleteAgeBracketModal.vue';
 import DeleteClassificationModal from '@/Pages/Competitions/Partials/DeleteClassificationModal.vue';
 import DeleteEventModal from '@/Pages/Competitions/Partials/DeleteEventModal.vue';
@@ -10,6 +11,7 @@ import EventFormModal from '@/Pages/Competitions/Partials/EventFormModal.vue';
 import EventGeneratorModal from '@/Pages/Competitions/Partials/EventGeneratorModal.vue';
 import GenerateAllHeatsModal from '@/Pages/Competitions/Partials/GenerateAllHeatsModal.vue';
 import ImportParticipantsModal from '@/Pages/Competitions/Partials/ImportParticipantsModal.vue';
+import OpenCompetitionModal from '@/Pages/Competitions/Partials/OpenCompetitionModal.vue';
 import ParticipantFormModal from '@/Pages/Competitions/Partials/ParticipantFormModal.vue';
 import ProgramGeneratorModal from '@/Pages/Competitions/Partials/ProgramGeneratorModal.vue';
 import CompetitionFormModal from '@/Pages/Dashboard/Partials/CompetitionFormModal.vue';
@@ -49,6 +51,8 @@ const competitionFormModal = ref<{ open: (competition?: Competition) => void } |
 const deleteCompetitionModal = ref<{ open: (competition: Competition) => void } | null>(
     null,
 );
+const closeCompetitionModal = ref<{ open: () => void } | null>(null);
+const openCompetitionModal = ref<{ open: () => void } | null>(null);
 const classificationFormModal = ref<{
     open: (options?: { classification?: Classification; parent?: Classification }) => void;
 } | null>(null);
@@ -331,6 +335,16 @@ const participantCountLabel = (event: CompetitionEvent) => {
     return `${count} ${count === 1 ? 'participant' : 'participants'}`;
 };
 
+const isCompetitionClosed = computed(() => props.competition.is_close);
+
+const openCloseCompetitionModal = () => {
+    closeCompetitionModal.value?.open();
+};
+
+const openOpenCompetitionModal = () => {
+    openCompetitionModal.value?.open();
+};
+
 const openEditCompetitionModal = () => {
     competitionFormModal.value?.open(props.competition);
 };
@@ -434,6 +448,12 @@ const formatParticipantName = (participant: Participant) =>
                     <p class="mt-2 text-sm font-medium text-ink-muted">
                         {{ competition.venue }}
                     </p>
+                    <span
+                        v-if="isCompetitionClosed"
+                        class="mt-3 inline-flex items-center rounded-full bg-surface px-3 py-1 text-xs font-semibold uppercase tracking-[0.14em] text-ink-muted"
+                    >
+                        Closed
+                    </span>
                 </div>
 
                 <div class="flex flex-wrap gap-2">
@@ -443,6 +463,22 @@ const formatParticipantName = (participant: Participant) =>
                         @click="openEditCompetitionModal"
                     >
                         Edit
+                    </button>
+                    <button
+                        v-if="! isCompetitionClosed"
+                        type="button"
+                        class="sm-btn-primary"
+                        @click="openCloseCompetitionModal"
+                    >
+                        Close competition
+                    </button>
+                    <button
+                        v-if="isCompetitionClosed"
+                        type="button"
+                        class="sm-btn-secondary"
+                        @click="openOpenCompetitionModal"
+                    >
+                        Reopen competition
                     </button>
                     <button
                         type="button"
@@ -549,6 +585,7 @@ const formatParticipantName = (participant: Participant) =>
                         </div>
                         <div class="flex flex-wrap gap-2">
                             <button
+                                v-if="! isCompetitionClosed"
                                 type="button"
                                 class="sm-btn-secondary"
                                 @click="importParticipantsModal?.open()"
@@ -556,6 +593,7 @@ const formatParticipantName = (participant: Participant) =>
                                 Import
                             </button>
                             <button
+                                v-if="! isCompetitionClosed"
                                 type="button"
                                 class="sm-btn-secondary"
                                 @click="participantFormModal?.open()"
@@ -688,7 +726,22 @@ const formatParticipantName = (participant: Participant) =>
 
                     <div class="mt-4 rounded-xl border border-surface-muted bg-surface p-3">
                         <div class="grid grid-cols-2 gap-2 sm:flex sm:flex-wrap">
+                            <Link
+                                v-if="isCompetitionClosed"
+                                :href="route('competition-heats.index', competition.id)"
+                                class="sm-btn-primary justify-center"
+                            >
+                                Go to Heat
+                            </Link>
+                            <Link
+                                v-if="isCompetitionClosed"
+                                :href="route('competition-results.index', competition.id)"
+                                class="sm-btn-secondary justify-center"
+                            >
+                                View Result
+                            </Link>
                             <button
+                                v-if="! isCompetitionClosed"
                                 type="button"
                                 class="sm-btn-secondary"
                                 @click="generateAllHeatsModal?.open()"
@@ -696,6 +749,7 @@ const formatParticipantName = (participant: Participant) =>
                                 Generate heats
                             </button>
                             <button
+                                v-if="! isCompetitionClosed"
                                 type="button"
                                 class="sm-btn-secondary"
                                 @click="programGeneratorModal?.open()"
@@ -703,6 +757,7 @@ const formatParticipantName = (participant: Participant) =>
                                 Generate program
                             </button>
                             <button
+                                v-if="! isCompetitionClosed"
                                 type="button"
                                 class="sm-btn-secondary"
                                 @click="eventGeneratorModal?.open()"
@@ -710,6 +765,7 @@ const formatParticipantName = (participant: Participant) =>
                                 Generate events
                             </button>
                             <button
+                                v-if="! isCompetitionClosed"
                                 type="button"
                                 class="sm-btn-secondary"
                                 @click="eventFormModal?.open()"
@@ -933,6 +989,7 @@ const formatParticipantName = (participant: Participant) =>
                         </p>
                     </div>
                     <button
+                        v-if="! isCompetitionClosed"
                         type="button"
                         class="sm-btn-secondary"
                         @click="classificationFormModal?.open()"
@@ -970,6 +1027,7 @@ const formatParticipantName = (participant: Participant) =>
                                 </div>
                                 <div class="flex flex-wrap gap-2">
                                     <button
+                                        v-if="! isCompetitionClosed"
                                         type="button"
                                         class="text-sm font-semibold text-ink-muted hover:text-ink"
                                         @click="classificationFormModal?.open({ parent: classification })"
@@ -977,6 +1035,7 @@ const formatParticipantName = (participant: Participant) =>
                                         Add class
                                     </button>
                                     <button
+                                        v-if="! isCompetitionClosed"
                                         type="button"
                                         class="text-sm font-semibold text-ink-muted hover:text-ink"
                                         @click="ageBracketFormModal?.open(classification)"
@@ -1072,6 +1131,7 @@ const formatParticipantName = (participant: Participant) =>
                                             </div>
                                             <div class="flex flex-wrap gap-2">
                                                 <button
+                                                    v-if="! isCompetitionClosed"
                                                     type="button"
                                                     class="text-sm font-semibold text-ink-muted hover:text-ink"
                                                     @click="ageBracketFormModal?.open(child)"
@@ -1224,5 +1284,13 @@ const formatParticipantName = (participant: Participant) =>
             :competition="competition"
         />
         <DeleteEventModal ref="deleteEventModal" :competition="competition" />
+        <CloseCompetitionModal
+            ref="closeCompetitionModal"
+            :competition="competition"
+        />
+        <OpenCompetitionModal
+            ref="openCompetitionModal"
+            :competition="competition"
+        />
     </AuthenticatedLayout>
 </template>

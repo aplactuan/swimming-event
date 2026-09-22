@@ -3,6 +3,8 @@
 namespace App\Http\Controllers;
 
 use App\Enums\EventGender;
+use App\Http\Requests\CloseCompetitionRequest;
+use App\Http\Requests\OpenCompetitionRequest;
 use App\Http\Requests\StoreCompetitionRequest;
 use App\Http\Requests\UpdateCompetitionRequest;
 use App\Http\Resources\CompetitionResource;
@@ -107,6 +109,32 @@ class CompetitionController extends Controller
         return redirect()
             ->route('competitions.show', $competition)
             ->with('status', 'competition-updated');
+    }
+
+    /**
+     * Close the competition, freezing its entries and program.
+     */
+    public function close(CloseCompetitionRequest $request, Competition $competition): RedirectResponse
+    {
+        $competition->is_close = true;
+        $competition->save();
+
+        return redirect()
+            ->route('competitions.show', $competition)
+            ->with('status', 'competition-closed');
+    }
+
+    /**
+     * Reopen the competition so its entries and program can change again.
+     */
+    public function open(OpenCompetitionRequest $request, Competition $competition): RedirectResponse
+    {
+        $competition->is_close = false;
+        $competition->save();
+
+        return redirect()
+            ->route('competitions.show', $competition)
+            ->with('status', 'competition-opened');
     }
 
     /**

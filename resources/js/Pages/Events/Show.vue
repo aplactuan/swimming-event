@@ -165,6 +165,7 @@ const laneClass = (lane: HeatLane) => [
                         </div>
                     </div>
                     <button
+                        v-if="! competition.is_close"
                         type="button"
                         class="sm-btn-primary"
                         :disabled="generateForm.processing || participants.length === 0"
@@ -211,6 +212,7 @@ const laneClass = (lane: HeatLane) => [
                             </p>
                         </div>
                         <button
+                            v-if="! competition.is_close"
                             type="button"
                             class="sm-btn-secondary"
                             @click="addEventParticipantModal?.open(event)"

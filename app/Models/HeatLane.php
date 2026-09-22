@@ -30,6 +30,31 @@ class HeatLane extends Model
     }
 
     /**
+     * Parse a m:ss.hh, ss.hh or ss finish time into hundredths.
+     *
+     * Returns null for a blank value or one that does not parse, which clears
+     * any time already recorded for the lane.
+     */
+    public static function parseFinishTime(?string $value): ?int
+    {
+        $value = trim((string) $value);
+
+        if ($value === '') {
+            return null;
+        }
+
+        if (preg_match('/^(?:(\d{1,2}):)?(\d{1,3})(?:\.(\d{1,2}))?$/', $value, $matches) !== 1) {
+            return null;
+        }
+
+        return static::toHundredths(
+            (int) ($matches[1] ?? 0),
+            (int) $matches[2],
+            (int) str_pad($matches[3] ?? '0', 2, '0', STR_PAD_RIGHT),
+        );
+    }
+
+    /**
      * Get the heat the lane belongs to.
      */
     public function heat(): BelongsTo

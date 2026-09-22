@@ -85,6 +85,7 @@ class EventController extends Controller
                 'id' => $competition->id,
                 'name' => $competition->name,
                 'number_of_lane' => $competition->number_of_lane,
+                'is_close' => $competition->is_close,
                 'participants' => ParticipantResource::collection($competition->participants)->resolve(),
             ],
             'event' => (new EventResource($event))->resolve(),

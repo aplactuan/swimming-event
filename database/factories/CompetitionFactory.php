@@ -29,4 +29,14 @@ class CompetitionFactory extends Factory
             'entry_fee' => fake()->numberBetween(500, 10000),
         ];
     }
+
+    /**
+     * Indicate that the competition has been closed.
+     */
+    public function closed(): static
+    {
+        return $this->state(fn (array $attributes): array => [
+            'is_close' => true,
+        ]);
+    }
 }
