@@ -80,6 +80,45 @@ export interface Heat {
     lanes: HeatLane[];
 }
 
+export interface RaceHeatOption {
+    id: string;
+    label: string;
+}
+
+export interface RaceHeat {
+    id: string;
+    heat_number: number;
+    label: string;
+    event: {
+        id: string;
+        name: string;
+        gender: EventGender;
+        eligibilities: EventEligibility[];
+    };
+    lanes: HeatLane[];
+}
+
+export interface ResultEventOption {
+    id: string;
+    label: string;
+}
+
+export interface EventResult {
+    id: string;
+    name: string;
+    gender: EventGender;
+    label: string;
+}
+
+export interface EventResultEntry {
+    id: string;
+    heat_number: number;
+    lane_number: number;
+    finish_time_hundredths: number | null;
+    finish_time: string | null;
+    participant: Participant;
+}
+
 export interface CompetitionEvent {
     id: string;
     name: string;
@@ -95,6 +134,7 @@ export interface EventShowCompetition {
     id: string;
     name: string;
     number_of_lane: number;
+    is_close: boolean;
     participants: Participant[];
 }
 
@@ -108,6 +148,7 @@ export interface Competition {
     coaches_meeting_time: string | null;
     registration_deadline: string;
     entry_fee: number;
+    is_close: boolean;
     classifications?: Classification[];
     events?: CompetitionEvent[];
     participants?: Participant[];

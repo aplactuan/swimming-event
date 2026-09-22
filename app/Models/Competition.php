@@ -9,6 +9,7 @@ use Illuminate\Database\Eloquent\Concerns\HasUuids;
 use Illuminate\Database\Eloquent\Factories\HasFactory;
 use Illuminate\Database\Eloquent\Model;
 use Illuminate\Database\Eloquent\Relations\HasMany;
+use Illuminate\Database\Eloquent\Relations\HasManyThrough;
 
 #[Fillable([
     'name',
@@ -32,7 +33,31 @@ class Competition extends Model
      */
     protected $attributes = [
         'number_of_lane' => 5,
+        'is_close' => false,
     ];
+
+    /**
+     * Determine whether the competition has been closed.
+     */
+    public function isClosed(): bool
+    {
+        return (bool) $this->is_close;
+    }
+
+    /**
+     * Count the events that are not ready for the competition to be closed.
+     *
+     * An event blocks the close when it has no heats at all, or when one of its
+     * heats has no lanes.
+     */
+    public function countEventsMissingHeats(): int
+    {
+        return $this->events()
+            ->where(fn (Builder $event): Builder => $event
+                ->doesntHave('heats')
+                ->orWhereHas('heats', fn (Builder $heats): Builder => $heats->doesntHave('lanes')))
+            ->count();
+    }
 
     /**
      * Get all classifications for the competition.
@@ -58,6 +83,16 @@ class Competition extends Model
     public function events(): HasMany
     {
         return $this->hasMany(Event::class)->orderBy('sort_order');
+    }
+
+    /**
+     * Get every heat in the competition, in program order.
+     */
+    public function heats(): HasManyThrough
+    {
+        return $this->hasManyThrough(Heat::class, Event::class)
+            ->orderBy('events.sort_order')
+            ->orderBy('heats.heat_number');
     }
 
     /**
@@ -93,6 +128,7 @@ class Competition extends Model
             'registration_deadline' => 'date',
             'entry_fee' => 'integer',
             'number_of_lane' => 'integer',
+            'is_close' => 'boolean',
         ];
     }
 }
