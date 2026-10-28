@@ -11,7 +11,14 @@ use App\Http\Controllers\EventHeatController;
 use App\Http\Controllers\EventParticipantController;
 use App\Http\Controllers\ParticipantController;
 use App\Http\Controllers\ProfileController;
+use App\Http\Controllers\PublicResultController;
 use Illuminate\Support\Facades\Route;
+
+Route::get('/', [PublicResultController::class, 'home'])->name('home');
+Route::get('/results/{competition}', [PublicResultController::class, 'index'])
+    ->name('public-results.index');
+Route::get('/results/{competition}/{event}', [PublicResultController::class, 'show'])
+    ->name('public-results.show');
 
 Route::middleware(['auth', 'verified'])->group(function () {
     Route::get('/dashboard', DashboardController::class)->name('dashboard');
