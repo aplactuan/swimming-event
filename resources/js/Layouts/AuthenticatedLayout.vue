@@ -93,8 +93,8 @@ const isActive = (item: NavItem) => {
                                 {{ initials }}
                             </span>
                             <span class="min-w-0">
-                                <span class="block truncate text-sm font-semibold text-white">{{ user.name }}</span>
-                                <span class="block truncate text-xs text-white/45">{{ user.email }}</span>
+                                <span class="block truncate text-sm font-semibold text-white">{{ user?.name }}</span>
+                                <span class="block truncate text-xs text-white/45">{{ user?.email }}</span>
                             </span>
                             <svg viewBox="0 0 24 24" fill="none" class="ml-auto h-4 w-4 text-white/40" aria-hidden="true">
                                 <path d="m8 10 4 4 4-4" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" />
