@@ -117,6 +117,14 @@ class Competition extends Model
     }
 
     /**
+     * Scope a query to competitions that have been closed for results.
+     */
+    public function scopeClosed(Builder $query): Builder
+    {
+        return $query->where('is_close', true);
+    }
+
+    /**
      * Get the attributes that should be cast.
      *
      * @return array<string, string>

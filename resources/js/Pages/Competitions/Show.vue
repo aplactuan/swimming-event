@@ -740,6 +740,13 @@ const formatParticipantName = (participant: Participant) =>
                             >
                                 View Result
                             </Link>
+                            <Link
+                                v-if="isCompetitionClosed"
+                                :href="route('public-results.index', competition.id)"
+                                class="sm-btn-secondary justify-center"
+                            >
+                                Public results
+                            </Link>
                             <button
                                 v-if="! isCompetitionClosed"
                                 type="button"
