@@ -1,5 +1,5 @@
 <script setup lang="ts">
-import type { StandingMvpRow, StandingTeamRow } from '@/types';
+import type { StandingMvpGroup, StandingMvpRow, StandingTeamRow } from '@/types';
 import { Link } from '@inertiajs/vue3';
 
 defineProps<{
@@ -10,7 +10,7 @@ defineProps<{
         competition_date?: string;
         is_close: boolean;
     };
-    mvp: StandingMvpRow[];
+    mvp: StandingMvpGroup[];
     teams: StandingTeamRow[];
     backHref: string;
     backLabel: string;
@@ -19,6 +19,9 @@ defineProps<{
 
 const formatPoints = (value: number): string =>
     new Intl.NumberFormat('en-US', { maximumFractionDigits: 2 }).format(value);
+
+const formatGender = (gender: string): string =>
+    gender === 'female' ? 'Female' : 'Male';
 
 /**
  * Rank rows by points, letting equal totals share a place.
@@ -39,6 +42,9 @@ const rankRows = <T extends { points: number }>(rows: T[]): (T & { rank: number 
 
 const rankedMvp = (rows: StandingMvpRow[]) => rankRows(rows);
 const rankedTeams = (rows: StandingTeamRow[]) => rankRows(rows);
+
+const groupKey = (group: StandingMvpGroup): string =>
+    `${group.classification_id}-${group.age_bracket_id}-${group.gender}`;
 </script>
 
 <template>
@@ -68,85 +74,96 @@ const rankedTeams = (rows: StandingTeamRow[]) => rankRows(rows);
             </span>
         </div>
 
-        <div class="grid gap-6 lg:grid-cols-2 lg:items-start">
-            <div class="sm-card">
-                <div class="sm-label">Individual</div>
-                <h3 class="mt-1 text-xl font-semibold text-ink">MVP</h3>
-                <p class="mt-1 text-sm text-ink-muted">
-                    Points from individual events only. Relay points are not counted.
-                </p>
+        <div class="sm-card">
+            <div class="sm-label">Team</div>
+            <h3 class="mt-1 text-xl font-semibold text-ink">Team champion</h3>
+            <p class="mt-1 text-sm text-ink-muted">
+                Individual and relay points combined.
+            </p>
 
+            <div
+                v-if="teams.length === 0"
+                class="mt-6 rounded-xl bg-surface px-4 py-6 text-sm text-ink-muted"
+            >
+                No points have been awarded yet.
+            </div>
+
+            <div v-else class="mt-6 grid gap-3 sm:grid-cols-2 lg:grid-cols-3">
                 <div
-                    v-if="mvp.length === 0"
-                    class="mt-6 rounded-xl bg-surface px-4 py-6 text-sm text-ink-muted"
+                    v-for="row in rankedTeams(teams)"
+                    :key="row.team_id"
+                    class="rounded-xl border border-surface-muted px-4 py-3"
                 >
-                    No points have been awarded yet.
-                </div>
-
-                <div v-else class="mt-6 space-y-3">
-                    <div
-                        v-for="row in rankedMvp(mvp)"
-                        :key="row.participant_id"
-                        class="rounded-xl border border-surface-muted px-4 py-3"
-                    >
-                        <div class="flex items-center gap-4">
-                            <span
-                                class="inline-flex h-9 w-9 shrink-0 items-center justify-center rounded-lg bg-surface text-sm font-semibold tabular-nums text-ink"
-                            >
-                                {{ row.rank }}
-                            </span>
-                            <div class="min-w-0 flex-1">
-                                <div class="truncate font-semibold text-ink">
-                                    {{ row.last_name }}, {{ row.first_name }}
-                                </div>
-                                <div class="truncate text-sm text-ink-muted">
-                                    {{ row.team ?? 'No team' }}
-                                </div>
+                    <div class="flex items-center gap-4">
+                        <span
+                            class="inline-flex h-9 w-9 shrink-0 items-center justify-center rounded-lg bg-surface text-sm font-semibold tabular-nums text-ink"
+                        >
+                            {{ row.rank }}
+                        </span>
+                        <div class="min-w-0 flex-1">
+                            <div class="truncate font-semibold text-ink">
+                                {{ row.name }}
                             </div>
-                            <span class="text-lg font-semibold tabular-nums text-ink">
-                                {{ formatPoints(row.points) }}
-                                <span class="text-xs font-semibold uppercase tracking-[0.12em] text-ink-muted">pts</span>
-                            </span>
                         </div>
+                        <span class="text-lg font-semibold tabular-nums text-ink">
+                            {{ formatPoints(row.points) }}
+                            <span class="text-xs font-semibold uppercase tracking-[0.12em] text-ink-muted">pts</span>
+                        </span>
                     </div>
                 </div>
             </div>
+        </div>
 
-            <div class="sm-card">
-                <div class="sm-label">Team</div>
-                <h3 class="mt-1 text-xl font-semibold text-ink">Team champion</h3>
-                <p class="mt-1 text-sm text-ink-muted">
-                    Individual and relay points combined.
-                </p>
+        <div>
+            <div class="sm-label">Individual</div>
+            <h3 class="mt-1 text-xl font-semibold text-ink">MVP by division</h3>
+            <p class="mt-1 text-sm text-ink-muted">
+                Separate MVP for each classification, age bracket, and gender. Relay points are not counted.
+            </p>
 
+            <div
+                v-if="mvp.length === 0"
+                class="mt-6 rounded-xl bg-surface px-4 py-6 text-sm text-ink-muted"
+            >
+                No points have been awarded yet.
+            </div>
+
+            <div v-else class="mt-6 grid gap-6 lg:grid-cols-2">
                 <div
-                    v-if="teams.length === 0"
-                    class="mt-6 rounded-xl bg-surface px-4 py-6 text-sm text-ink-muted"
+                    v-for="group in mvp"
+                    :key="groupKey(group)"
+                    class="sm-card"
                 >
-                    No points have been awarded yet.
-                </div>
+                    <div class="sm-label">{{ group.classification }}</div>
+                    <h4 class="mt-1 text-lg font-semibold text-ink">
+                        {{ group.age_bracket }} · {{ formatGender(group.gender) }}
+                    </h4>
 
-                <div v-else class="mt-6 space-y-3">
-                    <div
-                        v-for="row in rankedTeams(teams)"
-                        :key="row.team_id"
-                        class="rounded-xl border border-surface-muted px-4 py-3"
-                    >
-                        <div class="flex items-center gap-4">
-                            <span
-                                class="inline-flex h-9 w-9 shrink-0 items-center justify-center rounded-lg bg-surface text-sm font-semibold tabular-nums text-ink"
-                            >
-                                {{ row.rank }}
-                            </span>
-                            <div class="min-w-0 flex-1">
-                                <div class="truncate font-semibold text-ink">
-                                    {{ row.name }}
+                    <div class="mt-5 space-y-3">
+                        <div
+                            v-for="row in rankedMvp(group.standings)"
+                            :key="row.participant_id"
+                            class="rounded-xl border border-surface-muted px-4 py-3"
+                        >
+                            <div class="flex items-center gap-4">
+                                <span
+                                    class="inline-flex h-9 w-9 shrink-0 items-center justify-center rounded-lg bg-surface text-sm font-semibold tabular-nums text-ink"
+                                >
+                                    {{ row.rank }}
+                                </span>
+                                <div class="min-w-0 flex-1">
+                                    <div class="truncate font-semibold text-ink">
+                                        {{ row.last_name }}, {{ row.first_name }}
+                                    </div>
+                                    <div class="truncate text-sm text-ink-muted">
+                                        {{ row.team ?? 'No team' }}
+                                    </div>
                                 </div>
+                                <span class="text-lg font-semibold tabular-nums text-ink">
+                                    {{ formatPoints(row.points) }}
+                                    <span class="text-xs font-semibold uppercase tracking-[0.12em] text-ink-muted">pts</span>
+                                </span>
                             </div>
-                            <span class="text-lg font-semibold tabular-nums text-ink">
-                                {{ formatPoints(row.points) }}
-                                <span class="text-xs font-semibold uppercase tracking-[0.12em] text-ink-muted">pts</span>
-                            </span>
                         </div>
                     </div>
                 </div>

@@ -1,7 +1,7 @@
 <script setup lang="ts">
 import AuthenticatedLayout from '@/Layouts/AuthenticatedLayout.vue';
 import StandingsSheet from '@/Pages/Standings/Partials/StandingsSheet.vue';
-import type { StandingMvpRow, StandingTeamRow } from '@/types';
+import type { StandingMvpGroup, StandingTeamRow } from '@/types';
 import { Head } from '@inertiajs/vue3';
 
 defineProps<{
@@ -12,7 +12,7 @@ defineProps<{
         competition_date?: string;
         is_close: boolean;
     };
-    mvp: StandingMvpRow[];
+    mvp: StandingMvpGroup[];
     teams: StandingTeamRow[];
     public: boolean;
 }>();
