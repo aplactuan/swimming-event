@@ -5,6 +5,7 @@ namespace App\Services;
 use App\Enums\ParticipantGender;
 use App\Models\Classification;
 use App\Models\Competition;
+use App\Models\Team;
 use Carbon\Carbon;
 use Carbon\Exceptions\InvalidFormatException;
 use Illuminate\Http\UploadedFile;
@@ -14,6 +15,8 @@ use Illuminate\Validation\ValidationException;
 
 class ImportCompetitionParticipants
 {
+    public function __construct(private FindOrCreateTeam $findOrCreateTeam) {}
+
     /**
      * @var array<string, string>
      */
@@ -43,7 +46,7 @@ class ImportCompetitionParticipants
     ];
 
     /**
-     * @return array{imported: int, skipped_duplicates: int, skipped_invalid: int, classifications_created: int}
+     * @return array{imported: int, skipped_duplicates: int, skipped_invalid: int, classifications_created: int, teams_created: int}
      */
     public function import(Competition $competition, UploadedFile $file): array
     {
@@ -117,7 +120,7 @@ class ImportCompetitionParticipants
     /**
      * @param  resource  $handle
      * @param  array<string, int>  $columnIndexes
-     * @return array{imported: int, skipped_duplicates: int, skipped_invalid: int, classifications_created: int}
+     * @return array{imported: int, skipped_duplicates: int, skipped_invalid: int, classifications_created: int, teams_created: int}
      */
     private function importRows(Competition $competition, $handle, array $columnIndexes): array
     {
@@ -136,10 +139,19 @@ class ImportCompetitionParticipants
             ])
             ->all();
 
+        /** @var array<string, Team> $teamsByName */
+        $teamsByName = $competition->teams()
+            ->get()
+            ->mapWithKeys(fn (Team $team): array => [
+                Str::lower(Str::squish($team->name)) => $team,
+            ])
+            ->all();
+
         $imported = 0;
         $skippedDuplicates = 0;
         $skippedInvalid = 0;
         $classificationsCreated = 0;
+        $teamsCreated = 0;
 
         while (($row = fgetcsv($handle)) !== false) {
             if ($this->isEmptyRow($row, $columnIndexes)) {
@@ -148,7 +160,7 @@ class ImportCompetitionParticipants
 
             $firstName = Str::squish((string) ($row[$columnIndexes['first_name']] ?? ''));
             $lastName = Str::squish((string) ($row[$columnIndexes['last_name']] ?? ''));
-            $team = Str::squish((string) ($row[$columnIndexes['team']] ?? ''));
+            $teamName = Str::squish((string) ($row[$columnIndexes['team']] ?? ''));
             $gender = $this->parseGender((string) ($row[$columnIndexes['gender']] ?? ''));
             $birthdate = $this->parseBirthdate((string) ($row[$columnIndexes['birthdate']] ?? ''));
             $classificationName = Str::squish((string) ($row[$columnIndexes['classification']] ?? ''));
@@ -156,13 +168,13 @@ class ImportCompetitionParticipants
             if (
                 $firstName === ''
                 || $lastName === ''
-                || $team === ''
+                || $teamName === ''
                 || $gender === null
                 || $birthdate === null
                 || $classificationName === ''
                 || Str::length($firstName) > 255
                 || Str::length($lastName) > 255
-                || Str::length($team) > 255
+                || Str::length($teamName) > 255
                 || Str::length($classificationName) > 255
             ) {
                 $skippedInvalid++;
@@ -189,11 +201,18 @@ class ImportCompetitionParticipants
                 $classificationsCreated++;
             }
 
+            $teamKey = Str::lower($teamName);
+
+            if (! isset($teamsByName[$teamKey])) {
+                $teamsByName[$teamKey] = $this->findOrCreateTeam->handle($competition, $teamName);
+                $teamsCreated++;
+            }
+
             $competition->participants()->create([
                 'first_name' => $firstName,
                 'last_name' => $lastName,
                 'gender' => $gender,
-                'team' => $team,
+                'team_id' => $teamsByName[$teamKey]->id,
                 'birthdate' => $birthdate,
                 'classification_id' => $classificationsByName[$classificationKey]->id,
                 'paid' => false,
@@ -208,6 +227,7 @@ class ImportCompetitionParticipants
             'skipped_duplicates' => $skippedDuplicates,
             'skipped_invalid' => $skippedInvalid,
             'classifications_created' => $classificationsCreated,
+            'teams_created' => $teamsCreated,
         ];
     }
 

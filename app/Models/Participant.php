@@ -17,10 +17,10 @@ use Illuminate\Database\Eloquent\Relations\BelongsToMany;
 #[Fillable([
     'competition_id',
     'classification_id',
+    'team_id',
     'first_name',
     'last_name',
     'gender',
-    'team',
     'birthdate',
     'age',
     'paid',
@@ -55,6 +55,14 @@ class Participant extends Model
     public function classification(): BelongsTo
     {
         return $this->belongsTo(Classification::class);
+    }
+
+    /**
+     * Get the team the participant belongs to.
+     */
+    public function team(): BelongsTo
+    {
+        return $this->belongsTo(Team::class);
     }
 
     /**

@@ -49,6 +49,7 @@ class GenerateCompetitionEvents
                         'competition_id' => $competition->id,
                         'name' => Str::squish($name),
                         'gender' => $eventGender->value,
+                        'type' => 'individual',
                         'sort_order' => $nextSortOrder++,
                         'created_at' => $timestamp,
                         'updated_at' => $timestamp,

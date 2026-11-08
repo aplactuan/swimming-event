@@ -3,6 +3,7 @@
 namespace Database\Factories;
 
 use App\Models\Competition;
+use App\Models\CompetitionPointRule;
 use Illuminate\Database\Eloquent\Factories\Factory;
 
 /**
@@ -28,6 +29,16 @@ class CompetitionFactory extends Factory
             'registration_deadline' => fake()->dateTimeBetween('now', $competitionDate)->format('Y-m-d'),
             'entry_fee' => fake()->numberBetween(500, 10000),
         ];
+    }
+
+    /**
+     * Configure the model factory.
+     */
+    public function configure(): static
+    {
+        return $this->afterCreating(function (Competition $competition): void {
+            CompetitionPointRule::seedDefaultsFor($competition);
+        });
     }
 
     /**

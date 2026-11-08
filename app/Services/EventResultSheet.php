@@ -5,19 +5,21 @@ namespace App\Services;
 use App\Http\Resources\EventResultResource;
 use App\Models\Competition;
 use App\Models\Event;
-use App\Models\HeatLane;
 use Illuminate\Support\Collection;
 
 class EventResultSheet
 {
-    public function __construct(private CompetitionHeatSequence $sequence) {}
+    public function __construct(
+        private CompetitionHeatSequence $sequence,
+        private CompetitionScoring $scoring,
+    ) {}
 
     /**
-     * Props for one event's result sheet, fastest swimmer first.
+     * Props for one event's result sheet, fastest entry first.
      *
      * @return array{
      *     competition: array{id: string, name: string, venue: string, competition_date: string, is_close: bool},
-     *     event: array{id: string, name: string, gender: string, label: string},
+     *     event: array{id: string, name: string, gender: string, type: string, label: string},
      *     entries: array<int, mixed>,
      *     ages: list<int|null>,
      *     options: list<array{id: string, label: string}>,
@@ -38,7 +40,7 @@ class EventResultSheet
         abort_if($position === false, 404);
 
         $event = $events[$position];
-        $entries = $this->rankedEntries($event);
+        $scored = $this->scoring->scoreEvent($event, $competition);
 
         return [
             'competition' => [
@@ -52,11 +54,12 @@ class EventResultSheet
                 'id' => $event->id,
                 'name' => $event->name,
                 'gender' => $event->gender->value,
+                'type' => $event->type->value,
                 'label' => $this->sequence->eventLabel($event),
             ],
-            'entries' => EventResultResource::collection($entries)->resolve(),
-            'ages' => $entries
-                ->pluck('participant.age')
+            'entries' => EventResultResource::collection($scored)->resolve(),
+            'ages' => $scored
+                ->map(fn (array $row): ?int => $row['lane']->participant?->age)
                 ->unique()
                 ->sort()
                 ->values()
@@ -76,22 +79,12 @@ class EventResultSheet
     }
 
     /**
-     * Get the event's swum lanes, fastest first, with untimed swimmers last.
+     * Get the event's scored lanes, fastest first.
      *
-     * @return Collection<int, HeatLane>
+     * @return Collection<int, array{lane: \App\Models\HeatLane, place: int|null, points: float|null, status: string}>
      */
     public function rankedEntries(Event $event): Collection
     {
-        return $event->heatLanes()
-            ->whereNotNull('participant_id')
-            ->with(['heat', 'participant.classification'])
-            ->get()
-            ->sortBy(fn (HeatLane $lane): array => [
-                $lane->finish_time_hundredths === null ? 1 : 0,
-                $lane->finish_time_hundredths ?? 0,
-                $lane->participant->last_name,
-                $lane->participant->first_name,
-            ])
-            ->values();
+        return $this->scoring->scoreEvent($event);
     }
 }

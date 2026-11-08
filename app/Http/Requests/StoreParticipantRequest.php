@@ -32,7 +32,11 @@ class StoreParticipantRequest extends FormRequest
             'first_name' => ['required', 'string', 'max:255'],
             'last_name' => ['required', 'string', 'max:255'],
             'gender' => ['required', Rule::enum(ParticipantGender::class)],
-            'team' => ['required', 'string', 'max:255'],
+            'team_id' => [
+                'required',
+                'uuid',
+                Rule::exists('teams', 'id')->where('competition_id', $competition->id),
+            ],
             'birthdate' => ['required', 'date'],
             'classification_id' => [
                 'required',

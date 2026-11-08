@@ -11,6 +11,7 @@ import type {
     Competition,
     CompetitionEvent,
     EventGender,
+    EventType,
 } from '@/types';
 import { useForm } from '@inertiajs/vue3';
 import { computed, nextTick, ref } from 'vue';
@@ -35,10 +36,12 @@ const nameInput = ref<{ focus: () => void } | null>(null);
 const form = useForm<{
     name: string;
     gender: EventGender | '';
+    type: EventType;
     eligibilities: EligibilityRow[];
 }>({
     name: '',
     gender: '',
+    type: 'individual',
     eligibilities: [{ classification_id: '', age_bracket_id: '' }],
 });
 
@@ -76,6 +79,7 @@ const open = (event?: CompetitionEvent) => {
     editingEvent.value = event ?? null;
     form.name = event?.name ?? '';
     form.gender = event?.gender ?? '';
+    form.type = event?.type ?? 'individual';
     form.eligibilities =
         event?.eligibilities.map((row) => ({
             classification_id: row.classification_id,
@@ -187,6 +191,20 @@ defineExpose({ open });
                         <option value="mixed">Mixed</option>
                     </select>
                     <InputError class="mt-2" :message="form.errors.gender" />
+                </div>
+
+                <div>
+                    <InputLabel for="event_type" value="Type" />
+                    <select
+                        id="event_type"
+                        v-model="form.type"
+                        class="sm-input mt-1 block w-full"
+                        required
+                    >
+                        <option value="individual">Individual</option>
+                        <option value="relay">Relay</option>
+                    </select>
+                    <InputError class="mt-2" :message="form.errors.type" />
                 </div>
 
                 <div>

@@ -23,7 +23,11 @@ class ParticipantResource extends JsonResource
             'first_name' => $this->first_name,
             'last_name' => $this->last_name,
             'gender' => $this->gender->value,
-            'team' => $this->team,
+            'team_id' => $this->team_id,
+            'team' => $this->when(
+                $this->relationLoaded('team'),
+                fn (): ?string => $this->team?->name,
+            ),
             'birthdate' => $this->birthdate->toDateString(),
             'age' => $this->age,
             'classification_id' => $this->classification_id,

@@ -2,6 +2,7 @@
 
 namespace App\Http\Controllers;
 
+use App\Enums\EventType;
 use App\Http\Requests\StoreEventParticipantRequest;
 use App\Models\Competition;
 use App\Models\Event;
@@ -18,6 +19,8 @@ class EventParticipantController extends Controller
         Competition $competition,
         Event $event,
     ): RedirectResponse {
+        abort_if($event->type === EventType::Relay, 422);
+
         /** @var array{participant_id: string} $validated */
         $validated = $request->validated();
 
@@ -36,6 +39,7 @@ class EventParticipantController extends Controller
         Event $event,
         Participant $participant,
     ): RedirectResponse {
+        abort_if($event->type === EventType::Relay, 422);
         abort_unless($participant->paid, 422);
 
         $event->participants()->detach($participant->id);

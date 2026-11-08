@@ -3,6 +3,7 @@
 namespace Tests\Feature;
 
 use App\Enums\EventGender;
+use App\Enums\EventType;
 use App\Enums\ParticipantGender;
 use App\Models\AgeBracket;
 use App\Models\Classification;
@@ -54,6 +55,7 @@ class EventTest extends TestCase
             ->post(route('events.store', $competition), [
                 'name' => '25m Freestyle',
                 'gender' => EventGender::Female->value,
+                'type' => \App\Enums\EventType::Individual->value,
                 'eligibilities' => [
                     [
                         'classification_id' => $novice->id,
@@ -90,10 +92,11 @@ class EventTest extends TestCase
             ->post(route('events.store', $competition), [
                 'name' => '',
                 'gender' => 'invalid',
+                'type' => 'invalid',
                 'eligibilities' => [],
             ])
             ->assertRedirect(route('competitions.show', $competition))
-            ->assertSessionHasErrors(['name', 'gender', 'eligibilities']);
+            ->assertSessionHasErrors(['name', 'gender', 'type', 'eligibilities']);
     }
 
     public function test_age_bracket_must_be_effective_for_the_classification(): void
@@ -114,6 +117,7 @@ class EventTest extends TestCase
             ->post(route('events.store', $competition), [
                 'name' => '25m Breaststroke',
                 'gender' => EventGender::Male->value,
+                'type' => \App\Enums\EventType::Individual->value,
                 'eligibilities' => [
                     [
                         'classification_id' => $novice->id,
@@ -149,6 +153,7 @@ class EventTest extends TestCase
             ->post(route('events.store', $competition), [
                 'name' => '25m Breaststroke (Class A)',
                 'gender' => EventGender::Male->value,
+                'type' => \App\Enums\EventType::Individual->value,
                 'eligibilities' => [
                     [
                         'classification_id' => $child->id,
@@ -210,6 +215,7 @@ class EventTest extends TestCase
             ->put(route('events.update', [$competition, $event]), [
                 'name' => '50m Freestyle',
                 'gender' => EventGender::Mixed->value,
+                'type' => \App\Enums\EventType::Individual->value,
                 'eligibilities' => [
                     [
                         'classification_id' => $classification->id,
@@ -345,6 +351,7 @@ class EventTest extends TestCase
             ->post(route('events.store', $competition), [
                 'name' => '25m Freestyle',
                 'gender' => EventGender::Female->value,
+                'type' => \App\Enums\EventType::Individual->value,
                 'eligibilities' => [
                     [
                         'classification_id' => $classification->id,
@@ -406,6 +413,7 @@ class EventTest extends TestCase
             ->put(route('events.update', [$competition, $event]), [
                 'name' => '25m Freestyle',
                 'gender' => EventGender::Female->value,
+                'type' => \App\Enums\EventType::Individual->value,
                 'eligibilities' => [
                     [
                         'classification_id' => $classification->id,
@@ -485,6 +493,7 @@ class EventTest extends TestCase
         return [
             'name' => '25m Freestyle',
             'gender' => EventGender::Male->value,
+            'type' => \App\Enums\EventType::Individual->value,
             'eligibilities' => [
                 [
                     'classification_id' => $classification->id,

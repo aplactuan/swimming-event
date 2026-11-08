@@ -14,7 +14,7 @@ defineProps<{
     };
     event: EventResult | null;
     entries: EventResultEntry[];
-    ages: number[];
+    ages: (number | null)[];
     options: ResultEventOption[];
     position: number;
     total: number;
@@ -40,6 +40,7 @@ defineProps<{
             :back-href="route('home')"
             back-label="Back to all results"
             event-show-route="public-results.show"
+            :standings-href="route('public-standings.index', competition.id)"
         />
     </PublicLayout>
 </template>

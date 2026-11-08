@@ -7,13 +7,16 @@ import DeleteAgeBracketModal from '@/Pages/Competitions/Partials/DeleteAgeBracke
 import DeleteClassificationModal from '@/Pages/Competitions/Partials/DeleteClassificationModal.vue';
 import DeleteEventModal from '@/Pages/Competitions/Partials/DeleteEventModal.vue';
 import DeleteParticipantModal from '@/Pages/Competitions/Partials/DeleteParticipantModal.vue';
+import DeleteTeamModal from '@/Pages/Competitions/Partials/DeleteTeamModal.vue';
 import EventFormModal from '@/Pages/Competitions/Partials/EventFormModal.vue';
 import EventGeneratorModal from '@/Pages/Competitions/Partials/EventGeneratorModal.vue';
 import GenerateAllHeatsModal from '@/Pages/Competitions/Partials/GenerateAllHeatsModal.vue';
 import ImportParticipantsModal from '@/Pages/Competitions/Partials/ImportParticipantsModal.vue';
 import OpenCompetitionModal from '@/Pages/Competitions/Partials/OpenCompetitionModal.vue';
 import ParticipantFormModal from '@/Pages/Competitions/Partials/ParticipantFormModal.vue';
+import PointRulesModal from '@/Pages/Competitions/Partials/PointRulesModal.vue';
 import ProgramGeneratorModal from '@/Pages/Competitions/Partials/ProgramGeneratorModal.vue';
+import TeamFormModal from '@/Pages/Competitions/Partials/TeamFormModal.vue';
 import CompetitionFormModal from '@/Pages/Dashboard/Partials/CompetitionFormModal.vue';
 import DeleteCompetitionModal from '@/Pages/Dashboard/Partials/DeleteCompetitionModal.vue';
 import type {
@@ -21,10 +24,12 @@ import type {
     Classification,
     Competition,
     CompetitionEvent,
+    CompetitionPointRule,
     EventGender,
     Paginated,
     Participant,
     ParticipantGender,
+    Team,
 } from '@/types';
 import { Head, Link, router, usePage } from '@inertiajs/vue3';
 import { computed, ref, toRaw, watch } from 'vue';
@@ -34,6 +39,8 @@ const props = defineProps<{
     competition: Competition;
     participants: Paginated<Participant>;
     events: Paginated<CompetitionEvent>;
+    teams: Team[];
+    point_rules: CompetitionPointRule[];
     event_names: string[];
     age_bracket_names: string[];
     filters: {
@@ -73,6 +80,23 @@ const deleteEventModal = ref<{ open: (event: CompetitionEvent) => void } | null>
 const participantFormModal = ref<{ open: (participant?: Participant) => void } | null>(null);
 const importParticipantsModal = ref<{ open: () => void } | null>(null);
 const deleteParticipantModal = ref<{ open: (participant: Participant) => void } | null>(null);
+const teamFormModal = ref<{ open: (team?: Team) => void } | null>(null);
+const deleteTeamModal = ref<{ open: (team: Team) => void } | null>(null);
+const pointRulesModal = ref<{ open: (rules: CompetitionPointRule[]) => void } | null>(null);
+
+/**
+ * The competition with its teams attached, for modals that need the team list.
+ */
+const competitionWithTeams = computed<Competition>(() => ({
+    ...props.competition,
+    teams: props.teams,
+}));
+
+const teamParticipantCountLabel = (team: Team) => {
+    const count = team.participants_count ?? 0;
+
+    return `${count} ${count === 1 ? 'participant' : 'participants'}`;
+};
 
 const page = usePage();
 const importSummary = computed(() => page.props.flash.import_summary);
@@ -102,6 +126,12 @@ const importSummaryMessage = computed(() => {
     if (summary.classifications_created > 0) {
         parts.push(
             `Created ${summary.classifications_created} ${summary.classifications_created === 1 ? 'classification' : 'classifications'}.`,
+        );
+    }
+
+    if (summary.teams_created !== undefined && summary.teams_created > 0) {
+        parts.push(
+            `Created ${summary.teams_created} ${summary.teams_created === 1 ? 'team' : 'teams'}.`,
         );
     }
 
@@ -330,6 +360,12 @@ const goToEventsPage = (page: number) => {
 };
 
 const participantCountLabel = (event: CompetitionEvent) => {
+    if (event.type === 'relay') {
+        const teamCount = event.teams_count ?? event.teams?.length ?? 0;
+
+        return `${teamCount} ${teamCount === 1 ? 'team' : 'teams'}`;
+    }
+
     const count = event.participants_count ?? event.participants?.length ?? 0;
 
     return `${count} ${count === 1 ? 'participant' : 'participants'}`;
@@ -465,6 +501,20 @@ const formatParticipantName = (participant: Participant) =>
                         Edit
                     </button>
                     <button
+                        type="button"
+                        class="sm-btn-secondary"
+                        @click="pointRulesModal?.open(point_rules)"
+                    >
+                        Point rules
+                    </button>
+                    <Link
+                        v-if="isCompetitionClosed"
+                        :href="route('competition-standings.index', competition.id)"
+                        class="sm-btn-secondary"
+                    >
+                        Standings
+                    </Link>
+                    <button
                         v-if="! isCompetitionClosed"
                         type="button"
                         class="sm-btn-primary"
@@ -572,6 +622,7 @@ const formatParticipantName = (participant: Participant) =>
             </div>
 
             <div class="grid gap-6 lg:grid-cols-2 lg:items-start">
+                <div class="space-y-6">
                 <div class="sm-card">
                     <div class="flex flex-col gap-4 sm:flex-row sm:items-end sm:justify-between">
                         <div>
@@ -652,7 +703,7 @@ const formatParticipantName = (participant: Participant) =>
                                         </h4>
                                         <p class="mt-1 text-sm text-ink-muted">
                                             {{ formatGender(participant.gender) }}
-                                            · {{ participant.team }}
+                                            · {{ participant.team ?? 'No team' }}
                                             · {{ formatShortDate(participant.birthdate) }}
                                             · {{ participant.age }} yrs
                                             · {{ participant.classification?.name ?? 'Unknown class' }}
@@ -713,6 +764,74 @@ const formatParticipantName = (participant: Participant) =>
                 </div>
 
                 <div class="sm-card">
+                    <div class="flex flex-col gap-4 sm:flex-row sm:items-end sm:justify-between">
+                        <div>
+                            <div class="sm-label">Squads</div>
+                            <h3 class="mt-1 text-xl font-semibold text-ink">
+                                Teams
+                            </h3>
+                            <p class="mt-1 text-sm text-ink-muted">
+                                Participants belong to a team. Teams also enter relay events.
+                            </p>
+                        </div>
+                        <button
+                            v-if="! isCompetitionClosed"
+                            type="button"
+                            class="sm-btn-secondary"
+                            @click="teamFormModal?.open()"
+                        >
+                            Add team
+                        </button>
+                    </div>
+
+                    <div
+                        v-if="teams.length === 0"
+                        class="mt-6 rounded-xl bg-surface px-4 py-6 text-sm text-ink-muted"
+                    >
+                        No teams yet. Add a team before registering participants.
+                    </div>
+
+                    <ul v-else class="mt-6 space-y-3">
+                        <li
+                            v-for="team in teams"
+                            :key="team.id"
+                            class="rounded-xl border border-surface-muted bg-white p-4"
+                        >
+                            <div class="flex flex-col gap-3 sm:flex-row sm:items-start sm:justify-between">
+                                <div>
+                                    <h4 class="font-semibold text-ink">
+                                        {{ team.name }}
+                                    </h4>
+                                    <p
+                                        v-if="team.participants_count !== undefined"
+                                        class="mt-1 text-sm text-ink-muted"
+                                    >
+                                        {{ teamParticipantCountLabel(team) }}
+                                    </p>
+                                </div>
+                                <div class="flex flex-wrap gap-2">
+                                    <button
+                                        type="button"
+                                        class="text-sm font-semibold text-ink-muted hover:text-ink"
+                                        @click="teamFormModal?.open(team)"
+                                    >
+                                        Edit
+                                    </button>
+                                    <button
+                                        type="button"
+                                        class="text-sm font-semibold text-red-700 hover:text-red-800"
+                                        @click="deleteTeamModal?.open(team)"
+                                    >
+                                        Delete
+                                    </button>
+                                </div>
+                            </div>
+                        </li>
+                    </ul>
+                </div>
+                </div>
+
+                <div class="sm-card">
                     <div>
                         <div class="sm-label">Program</div>
                         <h3 class="mt-1 text-xl font-semibold text-ink">
@@ -742,10 +861,24 @@ const formatParticipantName = (participant: Participant) =>
                             </Link>
                             <Link
                                 v-if="isCompetitionClosed"
+                                :href="route('competition-standings.index', competition.id)"
+                                class="sm-btn-secondary justify-center"
+                            >
+                                Standings
+                            </Link>
+                            <Link
+                                v-if="isCompetitionClosed"
                                 :href="route('public-results.index', competition.id)"
                                 class="sm-btn-secondary justify-center"
                             >
                                 Public results
+                            </Link>
+                            <Link
+                                v-if="isCompetitionClosed"
+                                :href="route('public-standings.index', competition.id)"
+                                class="sm-btn-secondary justify-center"
+                            >
+                                Public standings
                             </Link>
                             <button
                                 v-if="! isCompetitionClosed"
@@ -914,6 +1047,7 @@ const formatParticipantName = (participant: Participant) =>
                                         </h4>
                                         <p class="mt-1 text-sm text-ink-muted">
                                             {{ formatGender(event.gender) }}
+                                            · {{ event.type === 'relay' ? 'Relay' : 'Individual' }}
                                             · {{ participantCountLabel(event) }}
                                         </p>
                                         <p class="mt-2 text-sm text-ink">
@@ -1270,12 +1404,15 @@ const formatParticipantName = (participant: Participant) =>
         />
         <ParticipantFormModal
             ref="participantFormModal"
-            :competition="competition"
+            :competition="competitionWithTeams"
         />
         <DeleteParticipantModal
             ref="deleteParticipantModal"
             :competition="competition"
         />
+        <TeamFormModal ref="teamFormModal" :competition="competition" />
+        <DeleteTeamModal ref="deleteTeamModal" :competition="competition" />
+        <PointRulesModal ref="pointRulesModal" :competition="competition" />
         <EventFormModal ref="eventFormModal" :competition="competition" />
         <EventGeneratorModal
             ref="eventGeneratorModal"

@@ -10,6 +10,7 @@ use App\Models\Competition;
 use App\Models\Event;
 use App\Models\EventEligibility;
 use App\Models\Participant;
+use App\Models\Team;
 use App\Models\User;
 use Illuminate\Foundation\Testing\RefreshDatabase;
 use Inertia\Testing\AssertableInertia as Assert;
@@ -58,7 +59,7 @@ class ParticipantTest extends TestCase
         $this->assertSame('Ada', $participant->first_name);
         $this->assertSame('Lovelace', $participant->last_name);
         $this->assertSame(ParticipantGender::Female, $participant->gender);
-        $this->assertSame('City Swim Club', $participant->team);
+        $this->assertSame('City Swim Club', $participant->team->name);
         $this->assertSame('2015-06-15', $participant->birthdate->toDateString());
         $this->assertSame($classification->id, $participant->classification_id);
         $this->assertFalse($participant->paid);
@@ -158,7 +159,7 @@ class ParticipantTest extends TestCase
                 'first_name' => '',
                 'last_name' => '',
                 'gender' => 'mixed',
-                'team' => '',
+                'team_id' => '',
                 'birthdate' => '',
                 'classification_id' => '',
             ])
@@ -167,7 +168,7 @@ class ParticipantTest extends TestCase
                 'first_name',
                 'last_name',
                 'gender',
-                'team',
+                'team_id',
                 'birthdate',
                 'classification_id',
             ]);
@@ -327,10 +328,11 @@ class ParticipantTest extends TestCase
             ->assertOk()
             ->assertInertia(fn (Assert $page) => $page
                 ->component('Competitions/Show')
-                ->has('competition.participants', 1)
-                ->where('competition.participants.0.id', $participant->id)
-                ->where('competition.participants.0.first_name', 'Ada')
-                ->where('competition.participants.0.classification.name', 'Novice'));
+                ->has('participants.data', 1)
+                ->where('participants.data.0.id', $participant->id)
+                ->where('participants.data.0.first_name', 'Ada')
+                ->where('participants.data.0.team', $participant->team->name)
+                ->where('participants.data.0.classification.name', 'Novice'));
     }
 
     public function test_created_participants_get_their_age_on_competition_day(): void
@@ -378,11 +380,16 @@ class ParticipantTest extends TestCase
      */
     private function validPayload(Classification $classification, array $overrides = []): array
     {
+        $team = Team::factory()->create([
+            'competition_id' => $classification->competition_id,
+            'name' => 'City Swim Club',
+        ]);
+
         return array_merge([
             'first_name' => 'Ada',
             'last_name' => 'Lovelace',
             'gender' => ParticipantGender::Female->value,
-            'team' => 'City Swim Club',
+            'team_id' => $team->id,
             'birthdate' => '2015-06-15',
             'classification_id' => $classification->id,
             'paid' => false,

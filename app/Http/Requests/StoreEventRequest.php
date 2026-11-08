@@ -3,6 +3,7 @@
 namespace App\Http\Requests;
 
 use App\Enums\EventGender;
+use App\Enums\EventType;
 use App\Models\AgeBracket;
 use App\Models\Classification;
 use App\Models\Competition;
@@ -34,6 +35,7 @@ class StoreEventRequest extends FormRequest
         return [
             'name' => ['required', 'string', 'max:255'],
             'gender' => ['required', Rule::enum(EventGender::class)],
+            'type' => ['required', Rule::enum(EventType::class)],
             'eligibilities' => ['required', 'array', 'min:1'],
             'eligibilities.*.classification_id' => [
                 'required',

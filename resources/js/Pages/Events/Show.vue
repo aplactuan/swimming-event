@@ -10,8 +10,9 @@ import type {
     HeatLane,
     Participant,
     ParticipantGender,
+    Team,
 } from '@/types';
-import { Head, Link, useForm } from '@inertiajs/vue3';
+import { Head, Link, router, useForm } from '@inertiajs/vue3';
 import { computed, ref } from 'vue';
 
 const props = defineProps<{
@@ -29,11 +30,58 @@ const removeEventParticipantModal = ref<{
 } | null>(null);
 const generateHeatsModal = ref<{ open: (event: CompetitionEvent) => void } | null>(null);
 
+const isRelay = computed(() => props.event.type === 'relay');
 const participants = computed(() => props.event.participants ?? []);
+const eventTeams = computed(() => props.event.teams ?? []);
+const entryCount = computed(() =>
+    isRelay.value ? eventTeams.value.length : participants.value.length,
+);
+const availableTeams = computed(() => {
+    const enteredIds = new Set(eventTeams.value.map((team) => team.id));
+
+    return props.competition.teams.filter((team) => ! enteredIds.has(team.id));
+});
 const heats = computed(() => props.event.heats ?? []);
 const hasHeats = computed(() => heats.value.length > 0);
 
 const generateForm = useForm({});
+const addTeamForm = useForm({ team_id: '' });
+const removingTeamId = ref<string | null>(null);
+
+const addTeam = () => {
+    if (addTeamForm.team_id === '') {
+        return;
+    }
+
+    addTeamForm.post(
+        route('event-teams.store', {
+            competition: props.competition.id,
+            event: props.event.id,
+        }),
+        {
+            preserveScroll: true,
+            onSuccess: () => addTeamForm.reset(),
+        },
+    );
+};
+
+const removeTeam = (team: Team) => {
+    removingTeamId.value = team.id;
+
+    router.delete(
+        route('event-teams.destroy', {
+            competition: props.competition.id,
+            event: props.event.id,
+            team: team.id,
+        }),
+        {
+            preserveScroll: true,
+            onFinish: () => {
+                removingTeamId.value = null;
+            },
+        },
+    );
+};
 const swapForm = useForm({
     from_lane_id: '',
     to_lane_id: '',
@@ -137,7 +185,7 @@ const laneClass = (lane: HeatLane) => [
     'flex w-full items-center gap-3 rounded-xl border px-3 py-2.5 text-left transition',
     selectedLaneId.value === lane.id
         ? 'border-pool bg-mint-soft ring-2 ring-pool/30'
-        : lane.participant
+        : lane.participant || lane.team
             ? 'border-surface-muted bg-white hover:border-pool/60'
             : 'border-dashed border-surface-muted bg-surface hover:border-pool/60',
 ];
@@ -161,6 +209,7 @@ const laneClass = (lane: HeatLane) => [
                         <h2 class="sm-heading mt-2">{{ event.name }}</h2>
                         <div class="mt-3 flex flex-wrap items-center gap-2 text-sm">
                             <span class="rounded-full bg-mint-soft px-3 py-1 font-semibold text-pool">{{ formatGender(event.gender) }}</span>
+                            <span class="rounded-full bg-surface px-3 py-1 font-semibold text-ink-muted">{{ isRelay ? 'Relay' : 'Individual' }}</span>
                             <span class="text-ink-muted">{{ formatEligibilitySummary(event) }}</span>
                         </div>
                     </div>
@@ -168,7 +217,7 @@ const laneClass = (lane: HeatLane) => [
                         v-if="! competition.is_close"
                         type="button"
                         class="sm-btn-primary"
-                        :disabled="generateForm.processing || participants.length === 0"
+                        :disabled="generateForm.processing || entryCount === 0"
                         @click="generateHeats"
                     >
                         {{ hasHeats ? 'Regenerate heats' : 'Generate heats' }}
@@ -185,8 +234,8 @@ const laneClass = (lane: HeatLane) => [
                         :class="tabClass('participants')"
                         @click="activeTab = 'participants'"
                     >
-                        Participants
-                        <span class="ml-1 tabular-nums text-ink-muted">{{ participants.length }}</span>
+                        {{ isRelay ? 'Teams' : 'Participants' }}
+                        <span class="ml-1 tabular-nums text-ink-muted">{{ entryCount }}</span>
                     </button>
                     <button
                         type="button"
@@ -200,7 +249,7 @@ const laneClass = (lane: HeatLane) => [
                     </button>
                 </nav>
 
-                <section v-if="activeTab === 'participants'" class="mt-6">
+                <section v-if="activeTab === 'participants' && ! isRelay" class="mt-6">
                     <div class="flex flex-col gap-4 sm:flex-row sm:items-end sm:justify-between">
                         <div>
                             <div class="sm-label">Entries</div>
@@ -265,6 +314,86 @@ const laneClass = (lane: HeatLane) => [
                     </ul>
                 </section>
 
+                <section v-else-if="activeTab === 'participants'" class="mt-6">
+                    <div class="flex flex-col gap-4 sm:flex-row sm:items-end sm:justify-between">
+                        <div>
+                            <div class="sm-label">Entries</div>
+                            <h3 class="mt-1 text-xl font-semibold text-ink">
+                                Teams
+                            </h3>
+                            <p class="mt-1 text-sm text-ink-muted">
+                                Relay events are entered by team. Each team swims one lane.
+                            </p>
+                        </div>
+                    </div>
+
+                    <form
+                        v-if="! competition.is_close"
+                        class="mt-6 flex flex-col gap-3 sm:flex-row sm:items-end"
+                        @submit.prevent="addTeam"
+                    >
+                        <div class="flex-1">
+                            <label class="sm-label" for="event-team-select">Add team</label>
+                            <select
+                                id="event-team-select"
+                                v-model="addTeamForm.team_id"
+                                class="sm-input mt-1 block w-full"
+                            >
+                                <option disabled value="">
+                                    {{ availableTeams.length === 0 ? 'No teams available' : 'Select team' }}
+                                </option>
+                                <option
+                                    v-for="team in availableTeams"
+                                    :key="team.id"
+                                    :value="team.id"
+                                >
+                                    {{ team.name }}
+                                </option>
+                            </select>
+                            <p v-if="addTeamForm.errors.team_id" class="mt-2 text-sm text-red-700">
+                                {{ addTeamForm.errors.team_id }}
+                            </p>
+                        </div>
+                        <button
+                            type="submit"
+                            class="sm-btn-secondary"
+                            :disabled="addTeamForm.processing || addTeamForm.team_id === ''"
+                        >
+                            Add team
+                        </button>
+                    </form>
+
+                    <div
+                        v-if="eventTeams.length === 0"
+                        class="mt-6 rounded-xl bg-surface px-4 py-6 text-sm text-ink-muted"
+                    >
+                        No teams entered yet.
+                    </div>
+
+                    <ul v-else class="mt-6 space-y-3">
+                        <li
+                            v-for="team in eventTeams"
+                            :key="team.id"
+                            class="rounded-xl border border-surface-muted bg-white p-4"
+                        >
+                            <div class="flex items-center justify-between gap-3">
+                                <h4 class="font-semibold text-ink">
+                                    {{ team.name }}
+                                </h4>
+                                <button
+                                    v-if="! competition.is_close"
+                                    type="button"
+                                    class="text-sm font-semibold text-red-700 hover:text-red-800 disabled:opacity-40"
+                                    :disabled="removingTeamId === team.id"
+                                    @click="removeTeam(team)"
+                                >
+                                    Remove
+                                </button>
+                            </div>
+                        </li>
+                    </ul>
+                </section>
+
                 <section v-else class="mt-6">
                     <div>
                         <div class="sm-label">Seeding</div>
@@ -281,8 +410,8 @@ const laneClass = (lane: HeatLane) => [
                         v-if="!hasHeats"
                         class="mt-6 rounded-xl bg-surface px-4 py-6 text-sm text-ink-muted"
                     >
-                        <template v-if="participants.length === 0">
-                            Add participants before generating heats.
+                        <template v-if="entryCount === 0">
+                            {{ isRelay ? 'Add teams before generating heats.' : 'Add participants before generating heats.' }}
                         </template>
                         <template v-else>
                             No heats generated yet.
@@ -298,7 +427,8 @@ const laneClass = (lane: HeatLane) => [
                             <div class="flex items-center justify-between">
                                 <h4 class="font-semibold text-ink">Heat {{ heat.heat_number }}</h4>
                                 <span class="text-xs text-ink-muted">
-                                    {{ heat.lanes.filter((lane) => lane.participant).length }} swimmers
+                                    {{ heat.lanes.filter((lane) => lane.participant || lane.team).length }}
+                                    {{ isRelay ? 'teams' : 'swimmers' }}
                                 </span>
                             </div>
 
@@ -321,11 +451,25 @@ const laneClass = (lane: HeatLane) => [
                                                 · {{ lane.participant.age }} yrs
                                             </span>
                                         </span>
+                                        <span v-else-if="lane.team" class="min-w-0 flex-1">
+                                            <span class="block truncate font-medium text-ink">
+                                                {{ lane.team.name }}
+                                            </span>
+                                            <span class="block truncate text-xs text-ink-muted">
+                                                Relay team
+                                            </span>
+                                        </span>
                                         <span v-else class="flex-1 text-sm italic text-ink-muted">
                                             Empty lane
                                         </span>
                                         <span
-                                            v-if="lane.finish_time"
+                                            v-if="lane.status === 'ns'"
+                                            class="text-sm font-semibold uppercase tracking-[0.12em] text-ink-muted"
+                                        >
+                                            NS
+                                        </span>
+                                        <span
+                                            v-else-if="lane.finish_time"
                                             class="text-sm font-semibold tabular-nums text-ink"
                                         >
                                             {{ lane.finish_time }}

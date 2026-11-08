@@ -49,12 +49,39 @@ export interface EventEligibility {
     };
 }
 
+export interface Team {
+    id: string;
+    name: string;
+    participants_count?: number;
+}
+
+export interface CompetitionPointRule {
+    id: string;
+    place: number;
+    points: number;
+}
+
+export type EventType = 'individual' | 'relay';
+
+export type HeatLaneStatus = 'swam' | 'ns';
+
+export interface RelaySwimmer {
+    order: number;
+    participant_id?: string;
+    participant: {
+        id: string;
+        first_name: string;
+        last_name: string;
+    } | null;
+}
+
 export interface Participant {
     id: string;
     first_name: string;
     last_name: string;
     gender: ParticipantGender;
-    team: string;
+    team_id: string;
+    team: string | null;
     birthdate: string;
     age: number;
     classification_id: string;
@@ -69,9 +96,13 @@ export interface HeatLane {
     id: string;
     lane_number: number;
     participant_id: string | null;
+    team_id: string | null;
     finish_time_hundredths: number | null;
     finish_time: string | null;
+    status: HeatLaneStatus;
     participant?: Participant | null;
+    team?: { id: string; name: string } | null;
+    relay_swimmers?: RelaySwimmer[];
 }
 
 export interface Heat {
@@ -93,6 +124,7 @@ export interface RaceHeat {
         id: string;
         name: string;
         gender: EventGender;
+        type: EventType;
         eligibilities: EventEligibility[];
     };
     lanes: HeatLane[];
@@ -107,6 +139,7 @@ export interface EventResult {
     id: string;
     name: string;
     gender: EventGender;
+    type: EventType;
     label: string;
 }
 
@@ -116,17 +149,39 @@ export interface EventResultEntry {
     lane_number: number;
     finish_time_hundredths: number | null;
     finish_time: string | null;
-    participant: Participant;
+    place: number | null;
+    points: number | null;
+    status: HeatLaneStatus;
+    participant: Participant | null;
+    team?: { id: string; name: string } | null;
+    relay_swimmers?: RelaySwimmer[];
+}
+
+export interface StandingMvpRow {
+    participant_id: string;
+    first_name: string;
+    last_name: string;
+    team: string | null;
+    points: number;
+}
+
+export interface StandingTeamRow {
+    team_id: string;
+    name: string;
+    points: number;
 }
 
 export interface CompetitionEvent {
     id: string;
     name: string;
     gender: EventGender;
+    type: EventType;
     sort_order: number;
     eligibilities: EventEligibility[];
     participants?: Participant[];
     participants_count?: number;
+    teams?: Team[];
+    teams_count?: number;
     heats?: Heat[];
 }
 
@@ -136,6 +191,7 @@ export interface EventShowCompetition {
     number_of_lane: number;
     is_close: boolean;
     participants: Participant[];
+    teams: Team[];
 }
 
 export interface Competition {
@@ -152,6 +208,8 @@ export interface Competition {
     classifications?: Classification[];
     events?: CompetitionEvent[];
     participants?: Participant[];
+    teams?: Team[];
+    point_rules?: CompetitionPointRule[];
 }
 
 export interface PaginatedMeta {
@@ -173,6 +231,7 @@ export interface ImportSummary {
     skipped_duplicates: number;
     skipped_invalid: number;
     classifications_created: number;
+    teams_created?: number;
 }
 
 export type PageProps<

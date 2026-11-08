@@ -58,6 +58,10 @@ class ParticipantEventSync
             return false;
         }
 
+        if ($event->isRelay()) {
+            return false;
+        }
+
         if (! $this->matchesGender($participant, $event)) {
             return false;
         }

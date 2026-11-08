@@ -46,7 +46,12 @@ class CompetitionHeatController extends Controller
         abort_if($position === false, 404);
 
         $heat = $heats[$position];
-        $heat->load('lanes.participant.classification');
+        $heat->load([
+            'lanes.participant.classification',
+            'lanes.participant.team',
+            'lanes.team',
+            'lanes.relaySwimmers.participant',
+        ]);
 
         return Inertia::render('Heats/Show', [
             'competition' => [
@@ -63,6 +68,7 @@ class CompetitionHeatController extends Controller
                     'id' => $heat->event->id,
                     'name' => $heat->event->name,
                     'gender' => $heat->event->gender->value,
+                    'type' => $heat->event->type->value,
                     'eligibilities' => EventEligibilityResource::collection(
                         $heat->event->eligibilities,
                     )->resolve(),
@@ -93,7 +99,7 @@ class CompetitionHeatController extends Controller
     ): RedirectResponse {
         abort_unless($heat->event->competition_id === $competition->id, 404);
 
-        /** @var array{lanes: list<array{id: string, finish_time: string|null}>} $validated */
+        /** @var array{lanes: list<array{id: string, finish_time: string|null, status: string}>} $validated */
         $validated = $request->validated();
 
         DB::transaction(function () use ($heat, $validated): void {
@@ -103,9 +109,15 @@ class CompetitionHeatController extends Controller
                 ->keyBy('id');
 
             foreach ($validated['lanes'] as $lane) {
+                $status = $lane['status'];
+                $finishTime = $status === 'ns'
+                    ? null
+                    : HeatLane::parseFinishTime($lane['finish_time']);
+
                 $lanes[$lane['id']]
                     ->forceFill([
-                        'finish_time_hundredths' => HeatLane::parseFinishTime($lane['finish_time']),
+                        'finish_time_hundredths' => $finishTime,
+                        'status' => $status,
                     ])
                     ->save();
             }
