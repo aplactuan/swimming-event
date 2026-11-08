@@ -8,6 +8,7 @@ use App\Http\Requests\StoreEventRequest;
 use App\Http\Requests\UpdateEventRequest;
 use App\Http\Resources\EventResource;
 use App\Http\Resources\ParticipantResource;
+use App\Http\Resources\TeamResource;
 use App\Models\Competition;
 use App\Models\Event;
 use App\Services\GenerateCompetitionEvents;
@@ -75,10 +76,15 @@ class EventController extends Controller
             'eligibilities.classification',
             'eligibilities.ageBracket',
             'participants.classification',
+            'participants.team',
+            'teams',
             'heats.lanes.participant.classification',
+            'heats.lanes.participant.team',
+            'heats.lanes.team',
+            'heats.lanes.relaySwimmers.participant',
         ]);
 
-        $competition->load(['participants.classification']);
+        $competition->load(['participants.classification', 'participants.team', 'teams']);
 
         return Inertia::render('Events/Show', [
             'competition' => [
@@ -87,6 +93,7 @@ class EventController extends Controller
                 'number_of_lane' => $competition->number_of_lane,
                 'is_close' => $competition->is_close,
                 'participants' => ParticipantResource::collection($competition->participants)->resolve(),
+                'teams' => TeamResource::collection($competition->teams)->resolve(),
             ],
             'event' => (new EventResource($event))->resolve(),
         ]);
@@ -106,11 +113,15 @@ class EventController extends Controller
             $event = $competition->events()->create([
                 'name' => $validated['name'],
                 'gender' => $validated['gender'],
+                'type' => $validated['type'],
                 'sort_order' => Event::nextSortOrder($competition->id),
             ]);
 
             $event->syncEligibilities($validated['eligibilities']);
-            $sync->syncForEvent($event);
+
+            if (! $event->isRelay()) {
+                $sync->syncForEvent($event);
+            }
         });
 
         return redirect()
@@ -133,10 +144,17 @@ class EventController extends Controller
             $event->update([
                 'name' => $validated['name'],
                 'gender' => $validated['gender'],
+                'type' => $validated['type'],
             ]);
 
             $event->syncEligibilities($validated['eligibilities']);
-            $sync->syncForEvent($event);
+
+            if ($event->isRelay()) {
+                $event->participants()->detach();
+            } else {
+                $event->teams()->detach();
+                $sync->syncForEvent($event);
+            }
         });
 
         return redirect()

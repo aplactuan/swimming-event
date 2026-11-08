@@ -2,6 +2,7 @@
 
 namespace App\Models;
 
+use App\Enums\HeatLaneStatus;
 use Database\Factories\HeatLaneFactory;
 use Illuminate\Database\Eloquent\Attributes\Fillable;
 use Illuminate\Database\Eloquent\Builder;
@@ -9,17 +10,29 @@ use Illuminate\Database\Eloquent\Concerns\HasUuids;
 use Illuminate\Database\Eloquent\Factories\HasFactory;
 use Illuminate\Database\Eloquent\Model;
 use Illuminate\Database\Eloquent\Relations\BelongsTo;
+use Illuminate\Database\Eloquent\Relations\HasMany;
 
 #[Fillable([
     'heat_id',
     'participant_id',
+    'team_id',
     'lane_number',
     'finish_time_hundredths',
+    'status',
 ])]
 class HeatLane extends Model
 {
     /** @use HasFactory<HeatLaneFactory> */
     use HasFactory, HasUuids;
+
+    /**
+     * The model's default values for attributes.
+     *
+     * @var array<string, mixed>
+     */
+    protected $attributes = [
+        'status' => 'swam',
+    ];
 
     /**
      * Convert minutes, seconds and hundredths into a storable finish time.
@@ -55,6 +68,22 @@ class HeatLane extends Model
     }
 
     /**
+     * Whether the lane is marked did-not-swim.
+     */
+    public function isNs(): bool
+    {
+        return $this->status === HeatLaneStatus::Ns;
+    }
+
+    /**
+     * Whether the lane has an assigned individual or relay entry.
+     */
+    public function isAssigned(): bool
+    {
+        return $this->participant_id !== null || $this->team_id !== null;
+    }
+
+    /**
      * Get the heat the lane belongs to.
      */
     public function heat(): BelongsTo
@@ -68,6 +97,22 @@ class HeatLane extends Model
     public function participant(): BelongsTo
     {
         return $this->belongsTo(Participant::class);
+    }
+
+    /**
+     * Get the team assigned to the lane (relay events).
+     */
+    public function team(): BelongsTo
+    {
+        return $this->belongsTo(Team::class);
+    }
+
+    /**
+     * Get the optional display-only relay lineup for this lane.
+     */
+    public function relaySwimmers(): HasMany
+    {
+        return $this->hasMany(RelayLaneSwimmer::class)->orderBy('order');
     }
 
     /**
@@ -117,6 +162,7 @@ class HeatLane extends Model
         return [
             'lane_number' => 'integer',
             'finish_time_hundredths' => 'integer',
+            'status' => HeatLaneStatus::class,
         ];
     }
 }

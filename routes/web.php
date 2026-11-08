@@ -4,19 +4,26 @@ use App\Http\Controllers\AgeBracketController;
 use App\Http\Controllers\ClassificationController;
 use App\Http\Controllers\CompetitionController;
 use App\Http\Controllers\CompetitionHeatController;
+use App\Http\Controllers\CompetitionPointRuleController;
 use App\Http\Controllers\CompetitionResultController;
+use App\Http\Controllers\CompetitionStandingController;
 use App\Http\Controllers\DashboardController;
 use App\Http\Controllers\EventController;
 use App\Http\Controllers\EventHeatController;
 use App\Http\Controllers\EventParticipantController;
+use App\Http\Controllers\EventTeamController;
 use App\Http\Controllers\ParticipantController;
 use App\Http\Controllers\ProfileController;
 use App\Http\Controllers\PublicResultController;
+use App\Http\Controllers\PublicStandingController;
+use App\Http\Controllers\TeamController;
 use Illuminate\Support\Facades\Route;
 
 Route::get('/', [PublicResultController::class, 'home'])->name('home');
 Route::get('/results/{competition}', [PublicResultController::class, 'index'])
     ->name('public-results.index');
+Route::get('/results/{competition}/standings', [PublicStandingController::class, 'index'])
+    ->name('public-standings.index');
 Route::get('/results/{competition}/{event}', [PublicResultController::class, 'show'])
     ->name('public-results.show');
 
@@ -39,6 +46,8 @@ Route::middleware(['auth', 'verified'])->group(function () {
         ->name('competition-results.index');
     Route::get('/competitions/{competition}/results/{event}', [CompetitionResultController::class, 'show'])
         ->name('competition-results.show');
+    Route::get('/competitions/{competition}/standings', [CompetitionStandingController::class, 'index'])
+        ->name('competition-standings.index');
     Route::delete('/competitions/{competition}', [CompetitionController::class, 'destroy'])->name('competitions.destroy');
 
     Route::scopeBindings()->group(function () {
@@ -89,11 +98,28 @@ Route::middleware(['auth', 'verified'])->group(function () {
         Route::delete('/competitions/{competition}/participants/{participant}', [ParticipantController::class, 'destroy'])
             ->name('participants.destroy');
 
+        Route::post('/competitions/{competition}/teams', [TeamController::class, 'store'])
+            ->middleware('competition.open')
+            ->name('teams.store');
+        Route::put('/competitions/{competition}/teams/{team}', [TeamController::class, 'update'])
+            ->name('teams.update');
+        Route::delete('/competitions/{competition}/teams/{team}', [TeamController::class, 'destroy'])
+            ->name('teams.destroy');
+
+        Route::put('/competitions/{competition}/point-rules', [CompetitionPointRuleController::class, 'update'])
+            ->name('competition-point-rules.update');
+
         Route::post('/competitions/{competition}/events/{event}/participants', [EventParticipantController::class, 'store'])
             ->middleware('competition.open')
             ->name('event-participants.store');
         Route::delete('/competitions/{competition}/events/{event}/participants/{participant}', [EventParticipantController::class, 'destroy'])
             ->name('event-participants.destroy');
+
+        Route::post('/competitions/{competition}/events/{event}/teams', [EventTeamController::class, 'store'])
+            ->middleware('competition.open')
+            ->name('event-teams.store');
+        Route::delete('/competitions/{competition}/events/{event}/teams/{team}', [EventTeamController::class, 'destroy'])
+            ->name('event-teams.destroy');
 
         Route::post('/competitions/{competition}/events/heats/generate', [EventHeatController::class, 'generateAll'])
             ->middleware('competition.open')

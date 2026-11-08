@@ -1,7 +1,13 @@
 <script setup lang="ts">
 import InputError from '@/Components/InputError.vue';
 import AuthenticatedLayout from '@/Layouts/AuthenticatedLayout.vue';
-import type { EventShowCompetition, HeatLane, RaceHeat, RaceHeatOption } from '@/types';
+import type {
+    EventShowCompetition,
+    HeatLane,
+    HeatLaneStatus,
+    RaceHeat,
+    RaceHeatOption,
+} from '@/types';
 import { Head, Link, router, useForm, usePage } from '@inertiajs/vue3';
 import { computed, nextTick, onMounted, ref, watch } from 'vue';
 
@@ -19,13 +25,18 @@ const page = usePage();
 const saved = computed(() => page.props.flash.status === 'heat-times-saved');
 
 const swumLanes = computed(() =>
-    props.heat.lanes.filter((lane) => lane.participant_id !== null),
+    props.heat.lanes.filter(
+        (lane) => lane.participant_id !== null || lane.team_id !== null,
+    ),
 );
+
+const isRelay = computed(() => props.heat.event.type === 'relay');
 
 const initialLanes = () =>
     swumLanes.value.map((lane) => ({
         id: lane.id,
-        finish_time: lane.finish_time ?? '',
+        finish_time: lane.status === 'ns' ? '' : (lane.finish_time ?? ''),
+        status: (lane.status ?? 'swam') as HeatLaneStatus,
     }));
 
 const form = useForm({ lanes: initialLanes() });
@@ -95,13 +106,38 @@ const focusLane = (index: number) => {
  * Enter moves down the lanes, and saves from the last one.
  */
 const onEnter = (index: number) => {
-    if (index + 1 < form.lanes.length) {
-        focusLane(index + 1);
+    const nextIndex = form.lanes.findIndex(
+        (lane, laneIndex) => laneIndex > index && lane.status !== 'ns',
+    );
+
+    if (nextIndex !== -1) {
+        focusLane(nextIndex);
 
         return;
     }
 
     save();
+};
+
+const isNs = (index: number): boolean => form.lanes[index]?.status === 'ns';
+
+/**
+ * Mark a lane as did-not-start; NS lanes never keep a finish time.
+ */
+const toggleNs = (index: number, checked: boolean) => {
+    const lane = form.lanes[index];
+
+    if (! lane) {
+        return;
+    }
+
+    lane.status = checked ? 'ns' : 'swam';
+
+    if (checked) {
+        lane.finish_time = '';
+    } else {
+        nextTick(() => focusLane(index));
+    }
 };
 
 /**
@@ -124,7 +160,9 @@ const laneError = (index: number): string | undefined => {
 };
 
 const hasInvalidTime = computed(() =>
-    form.lanes.some((lane) => hasTooManySeconds(lane.finish_time)),
+    form.lanes.some(
+        (lane) => lane.status !== 'ns' && hasTooManySeconds(lane.finish_time),
+    ),
 );
 
 const goToHeat = (heatId: string | null) => {
@@ -154,7 +192,9 @@ const save = () => {
  * Land on the first lane still waiting for a time.
  */
 const focusFirstEmptyLane = () => {
-    const index = form.lanes.findIndex((lane) => lane.finish_time === '');
+    const index = form.lanes.findIndex(
+        (lane) => lane.status !== 'ns' && lane.finish_time === '',
+    );
 
     if (index !== -1) {
         focusLane(index);
@@ -175,10 +215,22 @@ watch(
 
 onMounted(() => nextTick(focusFirstEmptyLane));
 
-const participantName = (lane: HeatLane) =>
-    lane.participant
-        ? `${lane.participant.last_name}, ${lane.participant.first_name}`
-        : '—';
+const laneName = (lane: HeatLane) => {
+    if (lane.participant) {
+        return `${lane.participant.last_name}, ${lane.participant.first_name}`;
+    }
+
+    return lane.team?.name ?? '—';
+};
+
+const relaySwimmerNames = (lane: HeatLane): string =>
+    (lane.relay_swimmers ?? [])
+        .filter((swimmer) => swimmer.participant !== null)
+        .map(
+            (swimmer) =>
+                `${swimmer.participant?.last_name}, ${swimmer.participant?.first_name}`,
+        )
+        .join(' · ');
 </script>
 
 <template>
@@ -265,7 +317,7 @@ const participantName = (lane: HeatLane) =>
                     v-if="form.lanes.length === 0"
                     class="mt-6 rounded-xl bg-surface px-4 py-6 text-sm text-ink-muted"
                 >
-                    No swimmers are assigned to this heat.
+                    {{ isRelay ? 'No teams are assigned to this heat.' : 'No swimmers are assigned to this heat.' }}
                 </div>
 
                 <form v-else class="mt-6 space-y-3" @submit.prevent="save">
@@ -283,15 +335,33 @@ const participantName = (lane: HeatLane) =>
 
                             <div class="min-w-0 flex-1">
                                 <div class="truncate font-semibold text-ink">
-                                    {{ participantName(lane) }}
+                                    {{ laneName(lane) }}
                                 </div>
-                                <div class="truncate text-sm text-ink-muted">
-                                    {{ lane.participant?.team }}
-                                    <template v-if="lane.participant?.classification">
+                                <div v-if="lane.participant" class="truncate text-sm text-ink-muted">
+                                    {{ lane.participant.team }}
+                                    <template v-if="lane.participant.classification">
                                         · {{ lane.participant.classification.name }}
                                     </template>
                                 </div>
+                                <div v-else-if="isRelay" class="truncate text-sm text-ink-muted">
+                                    Relay team<template v-if="relaySwimmerNames(lane)">
+                                        · {{ relaySwimmerNames(lane) }}
+                                    </template>
+                                </div>
                             </div>
+
+                            <label
+                                class="inline-flex cursor-pointer items-center gap-2 text-sm font-semibold text-ink-muted"
+                            >
+                                <input
+                                    type="checkbox"
+                                    class="rounded border-surface-muted text-pool focus:ring-pool"
+                                    :checked="isNs(index)"
+                                    :aria-label="`Mark lane ${lane.lane_number} as did not start`"
+                                    @change="toggleNs(index, ($event.target as HTMLInputElement).checked)"
+                                />
+                                NS
+                            </label>
 
                             <div class="flex items-center gap-2">
                                 <label class="sr-only" :for="`lane-${lane.id}`">
@@ -304,8 +374,9 @@ const participantName = (lane: HeatLane) =>
                                     type="text"
                                     inputmode="numeric"
                                     autocomplete="off"
-                                    placeholder="0.00"
-                                    class="w-28 rounded-lg border-surface-muted text-right text-lg font-semibold tabular-nums focus:border-pool focus:ring-pool"
+                                    :placeholder="isNs(index) ? 'NS' : '0.00'"
+                                    :disabled="isNs(index)"
+                                    class="w-28 rounded-lg border-surface-muted text-right text-lg font-semibold tabular-nums focus:border-pool focus:ring-pool disabled:bg-surface disabled:opacity-60"
                                     :class="{ 'border-red-300': laneError(index) }"
                                     @input="onTimeInput(index, $event)"
                                     @focus="($event.target as HTMLInputElement).select()"
@@ -314,7 +385,7 @@ const participantName = (lane: HeatLane) =>
                                 <button
                                     type="button"
                                     class="rounded-lg px-2 py-1 text-sm font-semibold text-ink-muted transition hover:text-ink disabled:opacity-30"
-                                    :disabled="(form.lanes[index]?.finish_time ?? '') === ''"
+                                    :disabled="isNs(index) || (form.lanes[index]?.finish_time ?? '') === ''"
                                     :aria-label="`Clear time for lane ${lane.lane_number}`"
                                     @click="clearTime(index)"
                                 >

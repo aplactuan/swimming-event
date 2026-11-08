@@ -22,6 +22,8 @@ const props = defineProps<{
     competition: Competition;
 }>();
 
+const teamOptions = computed(() => props.competition.teams ?? []);
+
 const show = ref(false);
 const editingParticipant = ref<Participant | null>(null);
 const firstNameInput = ref<{ focus: () => void } | null>(null);
@@ -30,7 +32,7 @@ const form = useForm<{
     first_name: string;
     last_name: string;
     gender: ParticipantGender | '';
-    team: string;
+    team_id: string;
     birthdate: string;
     classification_id: string;
     paid: boolean;
@@ -38,7 +40,7 @@ const form = useForm<{
     first_name: '',
     last_name: '',
     gender: '',
-    team: '',
+    team_id: '',
     birthdate: '',
     classification_id: '',
     paid: false,
@@ -71,7 +73,7 @@ const open = (participant?: Participant) => {
     form.first_name = participant?.first_name ?? '';
     form.last_name = participant?.last_name ?? '';
     form.gender = participant?.gender ?? '';
-    form.team = participant?.team ?? '';
+    form.team_id = participant?.team_id ?? '';
     form.birthdate = participant?.birthdate ?? '';
     form.classification_id = participant?.classification_id ?? '';
     form.paid = participant?.paid ?? false;
@@ -174,15 +176,24 @@ defineExpose({ open });
 
                 <div>
                     <InputLabel for="participant_team" value="Team" />
-                    <TextInput
+                    <select
                         id="participant_team"
-                        v-model="form.team"
-                        type="text"
-                        class="mt-1 block w-full"
+                        v-model="form.team_id"
+                        class="sm-input mt-1 block w-full"
                         required
-                        autocomplete="off"
-                    />
-                    <InputError class="mt-2" :message="form.errors.team" />
+                    >
+                        <option disabled value="">
+                            {{ teamOptions.length === 0 ? 'Add a team first' : 'Select team' }}
+                        </option>
+                        <option
+                            v-for="team in teamOptions"
+                            :key="team.id"
+                            :value="team.id"
+                        >
+                            {{ team.name }}
+                        </option>
+                    </select>
+                    <InputError class="mt-2" :message="form.errors.team_id" />
                 </div>
 
                 <div>

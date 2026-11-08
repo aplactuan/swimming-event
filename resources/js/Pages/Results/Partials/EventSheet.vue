@@ -13,7 +13,7 @@ const props = defineProps<{
     };
     event: EventResult | null;
     entries: EventResultEntry[];
-    ages: number[];
+    ages: (number | null)[];
     options: ResultEventOption[];
     position: number;
     total: number;
@@ -22,36 +22,61 @@ const props = defineProps<{
     backHref: string;
     backLabel: string;
     eventShowRoute: string;
+    standingsHref?: string;
 }>();
 
 const selectedAges = ref<number[]>([]);
 
+const availableAges = computed(() =>
+    props.ages.filter((age): age is number => age !== null && age !== undefined),
+);
+
+const isRelay = computed(() => props.event?.type === 'relay');
+
 const filteredEntries = computed(() =>
     selectedAges.value.length === 0
         ? props.entries
-        : props.entries.filter((entry) =>
-              selectedAges.value.includes(entry.participant.age),
+        : props.entries.filter(
+              (entry) =>
+                  entry.participant !== null
+                  && selectedAges.value.includes(entry.participant.age),
           ),
 );
 
-const placeOf = (index: number): string => {
-    const entry = filteredEntries.value[index];
+const placeOf = (entry: EventResultEntry): string =>
+    entry.status === 'ns' || entry.place === null ? '—' : String(entry.place);
 
-    if (! entry || entry.finish_time_hundredths === null) {
-        return '—';
-    }
-
-    return String(index + 1);
-};
+const isNs = (entry: EventResultEntry): boolean => entry.status === 'ns';
 
 const timedCount = computed(
     () =>
-        filteredEntries.value.filter((entry) => entry.finish_time_hundredths !== null)
-            .length,
+        filteredEntries.value.filter(
+            (entry) => entry.status !== 'ns' && entry.finish_time_hundredths !== null,
+        ).length,
 );
 
-const participantName = (entry: EventResultEntry) =>
-    `${entry.participant.last_name}, ${entry.participant.first_name}`;
+const entryName = (entry: EventResultEntry): string => {
+    if (entry.participant) {
+        return `${entry.participant.last_name}, ${entry.participant.first_name}`;
+    }
+
+    return entry.team?.name ?? 'Unknown entry';
+};
+
+const teamName = (entry: EventResultEntry): string | null =>
+    entry.team?.name ?? entry.participant?.team ?? null;
+
+const relaySwimmerNames = (entry: EventResultEntry): string =>
+    (entry.relay_swimmers ?? [])
+        .filter((swimmer) => swimmer.participant !== null)
+        .map(
+            (swimmer) =>
+                `${swimmer.participant?.last_name}, ${swimmer.participant?.first_name}`,
+        )
+        .join(' · ');
+
+const formatPoints = (value: number): string =>
+    new Intl.NumberFormat('en-US', { maximumFractionDigits: 2 }).format(value);
 
 const goToEvent = (eventId: string | null) => {
     if (! eventId) {
@@ -76,12 +101,21 @@ watch(
 <template>
     <div class="space-y-6">
         <div class="border-b border-surface-muted pb-7">
-            <Link
-                :href="backHref"
-                class="inline-flex items-center text-sm font-medium text-ink-muted transition hover:text-pool"
-            >
-                ← {{ backLabel }}
-            </Link>
+            <div class="flex flex-wrap items-center justify-between gap-3">
+                <Link
+                    :href="backHref"
+                    class="inline-flex items-center text-sm font-medium text-ink-muted transition hover:text-pool"
+                >
+                    ← {{ backLabel }}
+                </Link>
+                <Link
+                    v-if="standingsHref"
+                    :href="standingsHref"
+                    class="sm-btn-secondary"
+                >
+                    Standings
+                </Link>
+            </div>
             <template v-if="event">
                 <div class="sm-label mt-5">Event {{ position }} of {{ total }}</div>
                 <h2 class="sm-heading mt-2">{{ event.label }}</h2>
@@ -133,7 +167,7 @@ watch(
             </div>
         </div>
 
-        <div v-if="event && ages.length > 0" class="sm-card">
+        <div v-if="event && availableAges.length > 0" class="sm-card">
             <div class="flex flex-wrap items-center justify-between gap-3">
                 <div>
                     <div class="sm-label">Filter</div>
@@ -155,7 +189,7 @@ watch(
 
             <div class="mt-4 flex flex-wrap gap-2">
                 <label
-                    v-for="age in ages"
+                    v-for="age in availableAges"
                     :key="age"
                     class="inline-flex cursor-pointer items-center gap-2 rounded-lg border border-surface-muted px-3 py-2 text-sm font-semibold text-ink transition hover:bg-surface"
                     :class="{
@@ -178,8 +212,8 @@ watch(
                 <div class="sm-label">Results</div>
                 <h3 class="mt-1 text-xl font-semibold text-ink">Fastest first</h3>
                 <p v-if="event" class="mt-1 text-sm text-ink-muted">
-                    {{ timedCount }} of {{ filteredEntries.length }} swimmers have a
-                    recorded time.
+                    {{ timedCount }} of {{ filteredEntries.length }}
+                    {{ isRelay ? 'teams' : 'swimmers' }} have a recorded time.
                 </p>
             </div>
 
@@ -196,45 +230,70 @@ watch(
             >
                 {{
                     entries.length === 0
-                        ? 'No swimmers are entered in this event yet.'
+                        ? (isRelay ? 'No teams are entered in this event yet.' : 'No swimmers are entered in this event yet.')
                         : 'No swimmers match the ages you ticked.'
                 }}
             </div>
 
             <div v-else class="mt-6 space-y-3">
                 <div
-                    v-for="(entry, index) in filteredEntries"
+                    v-for="entry in filteredEntries"
                     :key="entry.id"
                     class="rounded-xl border border-surface-muted px-4 py-3"
-                    :class="{ 'opacity-60': entry.finish_time_hundredths === null }"
+                    :class="{
+                        'opacity-60': isNs(entry) || entry.finish_time_hundredths === null,
+                    }"
                 >
                     <div class="flex flex-wrap items-center gap-4">
                         <span
                             class="inline-flex h-9 w-9 shrink-0 items-center justify-center rounded-lg bg-surface text-sm font-semibold tabular-nums text-ink"
                         >
-                            {{ placeOf(index) }}
+                            {{ placeOf(entry) }}
                         </span>
 
                         <div class="min-w-0 flex-1">
                             <div class="truncate font-semibold text-ink">
-                                {{ participantName(entry) }}
+                                {{ entryName(entry) }}
                             </div>
                             <div class="truncate text-sm text-ink-muted">
-                                Age {{ entry.participant.age }}
-                                <template v-if="entry.participant.team">
-                                    · {{ entry.participant.team }}
+                                <template v-if="entry.participant">
+                                    Age {{ entry.participant.age }}
+                                    <template v-if="teamName(entry)">
+                                        · {{ teamName(entry) }}
+                                    </template>
+                                    <template v-if="entry.participant.classification">
+                                        · {{ entry.participant.classification.name }}
+                                    </template>
+                                    ·
                                 </template>
-                                <template v-if="entry.participant.classification">
-                                    · {{ entry.participant.classification.name }}
+                                <template v-else-if="relaySwimmerNames(entry)">
+                                    {{ relaySwimmerNames(entry) }} ·
                                 </template>
-                                · Heat {{ entry.heat_number }} lane
+                                Heat {{ entry.heat_number }} lane
                                 {{ entry.lane_number }}
                             </div>
                         </div>
 
-                        <span class="text-lg font-semibold tabular-nums text-ink">
-                            {{ entry.finish_time ?? 'No time' }}
-                        </span>
+                        <div class="flex items-center gap-4">
+                            <span
+                                v-if="entry.points !== null"
+                                class="text-sm font-semibold tabular-nums text-pool"
+                            >
+                                {{ formatPoints(entry.points) }} pts
+                            </span>
+                            <span
+                                v-if="isNs(entry)"
+                                class="text-lg font-semibold uppercase tracking-[0.12em] text-ink-muted"
+                            >
+                                NS
+                            </span>
+                            <span
+                                v-else
+                                class="text-lg font-semibold tabular-nums text-ink"
+                            >
+                                {{ entry.finish_time ?? 'No time' }}
+                            </span>
+                        </div>
                     </div>
                 </div>
             </div>

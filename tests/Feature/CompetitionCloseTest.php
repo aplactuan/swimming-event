@@ -114,7 +114,10 @@ class CompetitionCloseTest extends TestCase
                 'first_name' => 'Ava',
                 'last_name' => 'Cruz',
                 'gender' => 'female',
-                'team' => 'Dolphins',
+                'team_id' => \App\Models\Team::factory()->create([
+                    'competition_id' => $competition->id,
+                    'name' => 'Dolphins',
+                ])->id,
                 'birthdate' => '2012-04-01',
                 'classification_id' => $classification->id,
             ]);

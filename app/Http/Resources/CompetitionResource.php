@@ -41,6 +41,14 @@ class CompetitionResource extends JsonResource
                 'participants',
                 fn () => ParticipantResource::collection($this->participants)->resolve(),
             ),
+            'teams' => $this->whenLoaded(
+                'teams',
+                fn () => TeamResource::collection($this->teams)->resolve(),
+            ),
+            'point_rules' => $this->whenLoaded(
+                'pointRules',
+                fn () => CompetitionPointRuleResource::collection($this->pointRules)->resolve(),
+            ),
         ];
     }
 

@@ -106,6 +106,22 @@ class Competition extends Model
     }
 
     /**
+     * Get the teams for the competition.
+     */
+    public function teams(): HasMany
+    {
+        return $this->hasMany(Team::class)->orderBy('name');
+    }
+
+    /**
+     * Get the place → points rules for the competition.
+     */
+    public function pointRules(): HasMany
+    {
+        return $this->hasMany(CompetitionPointRule::class)->orderBy('place');
+    }
+
+    /**
      * Scope a query to upcoming competitions, soonest first.
      */
     public function scopeUpcoming(Builder $query): Builder

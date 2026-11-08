@@ -7,11 +7,14 @@ use App\Http\Requests\CloseCompetitionRequest;
 use App\Http\Requests\OpenCompetitionRequest;
 use App\Http\Requests\StoreCompetitionRequest;
 use App\Http\Requests\UpdateCompetitionRequest;
+use App\Http\Resources\CompetitionPointRuleResource;
 use App\Http\Resources\CompetitionResource;
 use App\Http\Resources\EventResource;
 use App\Http\Resources\ParticipantResource;
+use App\Http\Resources\TeamResource;
 use App\Models\AgeBracket;
 use App\Models\Competition;
+use App\Models\CompetitionPointRule;
 use App\Models\Event;
 use App\Models\Participant;
 use Illuminate\Database\Eloquent\Builder;
@@ -48,10 +51,12 @@ class CompetitionController extends Controller
         $competition->load([
             'rootClassifications.ageBrackets',
             'rootClassifications.children.ageBrackets',
+            'teams',
+            'pointRules',
         ]);
 
         $participants = $competition->participants()
-            ->with('classification')
+            ->with(['classification', 'team'])
             ->searchByName($participantSearch)
             ->paginate(self::LIST_PER_PAGE, ['*'], 'participants_page')
             ->withQueryString();
@@ -75,6 +80,8 @@ class CompetitionController extends Controller
             'competition' => (new CompetitionResource($competition))->resolve(),
             'participants' => $this->paginatedPayload($participants, ParticipantResource::class),
             'events' => $this->paginatedPayload($events, EventResource::class),
+            'teams' => TeamResource::collection($competition->teams)->resolve(),
+            'point_rules' => CompetitionPointRuleResource::collection($competition->pointRules)->resolve(),
             'event_names' => $this->distinctEventNames($competition),
             'age_bracket_names' => $this->distinctAgeBracketNames($competition),
             'filters' => [
@@ -92,7 +99,8 @@ class CompetitionController extends Controller
      */
     public function store(StoreCompetitionRequest $request): RedirectResponse
     {
-        Competition::create($request->validated());
+        $competition = Competition::create($request->validated());
+        CompetitionPointRule::seedDefaultsFor($competition);
 
         return redirect()
             ->route('dashboard')

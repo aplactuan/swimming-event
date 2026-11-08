@@ -22,6 +22,7 @@ class EventResource extends JsonResource
             'id' => $this->id,
             'name' => $this->name,
             'gender' => $this->gender->value,
+            'type' => $this->type->value,
             'sort_order' => $this->sort_order,
             'eligibilities' => $this->whenLoaded(
                 'eligibilities',
@@ -32,6 +33,11 @@ class EventResource extends JsonResource
                 fn () => ParticipantResource::collection($this->participants)->resolve(),
             ),
             'participants_count' => $this->whenCounted('participants'),
+            'teams' => $this->whenLoaded(
+                'teams',
+                fn () => TeamResource::collection($this->teams)->resolve(),
+            ),
+            'teams_count' => $this->whenCounted('teams'),
             'heats' => $this->whenLoaded(
                 'heats',
                 fn () => HeatResource::collection($this->heats)->resolve(),

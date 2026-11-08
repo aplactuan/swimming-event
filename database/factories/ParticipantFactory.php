@@ -6,6 +6,7 @@ use App\Enums\ParticipantGender;
 use App\Models\Classification;
 use App\Models\Competition;
 use App\Models\Participant;
+use App\Models\Team;
 use Illuminate\Database\Eloquent\Factories\Factory;
 
 /**
@@ -25,10 +26,12 @@ class ParticipantFactory extends Factory
             'classification_id' => fn (array $attributes) => Classification::factory()->create([
                 'competition_id' => $attributes['competition_id'],
             ]),
+            'team_id' => fn (array $attributes) => Team::factory()->create([
+                'competition_id' => $attributes['competition_id'],
+            ]),
             'first_name' => fake()->firstName(),
             'last_name' => fake()->lastName(),
             'gender' => fake()->randomElement(ParticipantGender::cases()),
-            'team' => fake()->company().' Swim Club',
             'birthdate' => fake()->dateTimeBetween('-16 years', '-6 years')->format('Y-m-d'),
             'paid' => false,
         ];

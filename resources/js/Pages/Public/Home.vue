@@ -56,12 +56,18 @@ const formatDate = (value: string) =>
                             <p class="mt-1 text-sm text-ink-muted">
                                 {{ competition.venue }}
                             </p>
-                            <div class="mt-auto pt-6">
+                            <div class="mt-auto flex flex-wrap gap-2 pt-6">
                                 <Link
                                     :href="route('public-results.index', competition.id)"
                                     class="sm-btn-primary"
                                 >
                                     View results
+                                </Link>
+                                <Link
+                                    :href="route('public-standings.index', competition.id)"
+                                    class="sm-btn-secondary"
+                                >
+                                    Standings
                                 </Link>
                             </div>
                         </div>

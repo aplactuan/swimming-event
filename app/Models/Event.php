@@ -3,6 +3,7 @@
 namespace App\Models;
 
 use App\Enums\EventGender;
+use App\Enums\EventType;
 use Database\Factories\EventFactory;
 use Illuminate\Database\Eloquent\Attributes\Fillable;
 use Illuminate\Database\Eloquent\Builder;
@@ -18,12 +19,30 @@ use Illuminate\Database\Eloquent\Relations\HasManyThrough;
     'competition_id',
     'name',
     'gender',
+    'type',
     'sort_order',
 ])]
 class Event extends Model
 {
     /** @use HasFactory<EventFactory> */
     use HasFactory, HasUuids;
+
+    /**
+     * The model's default values for attributes.
+     *
+     * @var array<string, mixed>
+     */
+    protected $attributes = [
+        'type' => 'individual',
+    ];
+
+    /**
+     * Whether this event is a relay.
+     */
+    public function isRelay(): bool
+    {
+        return $this->type === EventType::Relay;
+    }
 
     /**
      * Get the next sort order for a competition.
@@ -89,6 +108,16 @@ class Event extends Model
         return $this->belongsToMany(Participant::class)
             ->orderBy('last_name')
             ->orderBy('first_name')
+            ->withTimestamps();
+    }
+
+    /**
+     * Get the teams entered in the event (relay events).
+     */
+    public function teams(): BelongsToMany
+    {
+        return $this->belongsToMany(Team::class)
+            ->orderBy('name')
             ->withTimestamps();
     }
 
@@ -169,6 +198,7 @@ class Event extends Model
     {
         return [
             'gender' => EventGender::class,
+            'type' => EventType::class,
             'sort_order' => 'integer',
         ];
     }

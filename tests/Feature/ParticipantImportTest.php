@@ -48,6 +48,7 @@ class ParticipantImportTest extends TestCase
                 'skipped_duplicates' => 0,
                 'skipped_invalid' => 0,
                 'classifications_created' => 2,
+                'teams_created' => 2,
             ]);
 
         $novice = Classification::query()->where('name', 'Novice')->first();
@@ -66,7 +67,7 @@ class ParticipantImportTest extends TestCase
         $this->assertNotNull($elias);
         $this->assertSame('Aban', $elias->last_name);
         $this->assertSame(ParticipantGender::Male, $elias->gender);
-        $this->assertSame('Leganes Aqua Phoenix', $elias->team);
+        $this->assertSame('Leganes Aqua Phoenix', $elias->team->name);
         $this->assertSame('2020-08-19', $elias->birthdate->toDateString());
         $this->assertSame($developmental->id, $elias->classification_id);
         $this->assertFalse($elias->paid);
@@ -95,7 +96,10 @@ class ParticipantImportTest extends TestCase
             'classification_id' => $classification->id,
             'first_name' => 'ELIAS MATTEO',
             'last_name' => 'Aban',
-            'team' => 'Existing Team',
+            'team_id' => \App\Models\Team::factory()->create([
+                'competition_id' => $competition->id,
+                'name' => 'Existing Team',
+            ]),
         ]);
 
         Participant::factory()->create([
@@ -121,7 +125,7 @@ class ParticipantImportTest extends TestCase
         );
         $this->assertSame(
             'Existing Team',
-            $competition->participants()->where('last_name', 'Aban')->value('team'),
+            $competition->participants()->where('last_name', 'Aban')->first()->team->name,
         );
         $this->assertSame(
             1,
@@ -213,6 +217,7 @@ class ParticipantImportTest extends TestCase
                 'skipped_duplicates' => 0,
                 'skipped_invalid' => 3,
                 'classifications_created' => 1,
+                'teams_created' => 1,
             ]);
 
         $this->assertSame(1, $competition->participants()->count());
@@ -242,7 +247,7 @@ class ParticipantImportTest extends TestCase
         $this->assertSame(1, $competition->participants()->count());
         $this->assertSame(
             'Leganes Aqua Phoenix',
-            $competition->participants()->value('team'),
+            $competition->participants()->first()->team->name,
         );
     }
 

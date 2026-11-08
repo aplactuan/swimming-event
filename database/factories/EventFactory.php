@@ -3,6 +3,7 @@
 namespace Database\Factories;
 
 use App\Enums\EventGender;
+use App\Enums\EventType;
 use App\Models\Competition;
 use App\Models\Event;
 use Illuminate\Database\Eloquent\Factories\Factory;
@@ -28,7 +29,18 @@ class EventFactory extends Factory
                 '50m Backstroke',
             ]),
             'gender' => fake()->randomElement(EventGender::cases()),
+            'type' => EventType::Individual,
             'sort_order' => 1,
         ];
+    }
+
+    /**
+     * Indicate that the event is a relay.
+     */
+    public function relay(): static
+    {
+        return $this->state(fn (array $attributes): array => [
+            'type' => EventType::Relay,
+        ]);
     }
 }
