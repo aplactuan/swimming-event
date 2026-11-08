@@ -90,6 +90,26 @@ class Participant extends Model
     }
 
     /**
+     * Resolve the classification age bracket that matches this participant's birthdate.
+     */
+    public function matchingAgeBracket(): ?AgeBracket
+    {
+        if ($this->birthdate === null || $this->classification_id === null) {
+            return null;
+        }
+
+        $this->loadMissing('classification.ageBrackets');
+
+        foreach ($this->classification?->ageBrackets ?? [] as $ageBracket) {
+            if ($ageBracket->matchesBirthdate($this->birthdate)) {
+                return $ageBracket;
+            }
+        }
+
+        return null;
+    }
+
+    /**
      * Scope a query to participants matching last name or full name.
      */
     public function scopeSearchByName(Builder $query, ?string $search): Builder

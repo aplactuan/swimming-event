@@ -165,6 +165,15 @@ export interface StandingMvpRow {
     points: number;
 }
 
+export interface StandingMvpGroup {
+    classification_id: string;
+    classification: string;
+    age_bracket_id: string;
+    age_bracket: string;
+    gender: string;
+    standings: StandingMvpRow[];
+}
+
 export interface StandingTeamRow {
     team_id: string;
     name: string;

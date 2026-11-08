@@ -10,7 +10,7 @@ use Inertia\Response;
 class CompetitionStandingController extends Controller
 {
     /**
-     * Display MVP and team champion standings for the competition.
+     * Display division MVPs and team champion standings for the competition.
      */
     public function index(Competition $competition, CompetitionScoring $scoring): Response
     {

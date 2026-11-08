@@ -10,7 +10,7 @@ use Inertia\Response;
 class PublicStandingController extends Controller
 {
     /**
-     * Display public MVP and team champion standings for a closed competition.
+     * Display public division MVPs and team champion standings for a closed competition.
      */
     public function index(Competition $competition, CompetitionScoring $scoring): Response
     {

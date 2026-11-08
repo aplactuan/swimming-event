@@ -63,25 +63,64 @@ class CompetitionScoring
     }
 
     /**
-     * Individual MVP standings (relay points excluded).
+     * Individual MVP standings grouped by classification, age bracket, and gender.
+     * Relay points are excluded.
      *
-     * @return list<array{participant_id: string, first_name: string, last_name: string, team: string|null, points: float}>
+     * @return list<array{
+     *     classification_id: string,
+     *     classification: string,
+     *     age_bracket_id: string,
+     *     age_bracket: string,
+     *     gender: string,
+     *     standings: list<array{participant_id: string, first_name: string, last_name: string, team: string|null, points: float}>
+     * }>
      */
     public function mvpStandings(Competition $competition): array
     {
-        $totals = [];
+        $groups = [];
 
-        foreach ($competition->events()->where('type', EventType::Individual)->get() as $event) {
+        $events = $competition->events()
+            ->where('type', EventType::Individual)
+            ->get();
+
+        foreach ($events as $event) {
             foreach ($this->scoreEvent($event, $competition) as $row) {
                 if ($row['points'] === null || $row['lane']->participant_id === null) {
                     continue;
                 }
 
                 $participant = $row['lane']->participant;
+                $participant->loadMissing(['classification.ageBrackets', 'team']);
+
+                $ageBracket = $participant->matchingAgeBracket();
+
+                if ($ageBracket === null || $participant->classification === null) {
+                    continue;
+                }
+
+                $groupKey = implode('|', [
+                    $participant->classification_id,
+                    $ageBracket->id,
+                    $participant->gender->value,
+                ]);
+
+                if (! isset($groups[$groupKey])) {
+                    $groups[$groupKey] = [
+                        'classification_id' => $participant->classification_id,
+                        'classification' => $participant->classification->name,
+                        'classification_sort_order' => $participant->classification->sort_order,
+                        'age_bracket_id' => $ageBracket->id,
+                        'age_bracket' => $ageBracket->name,
+                        'age_bracket_sort_order' => $ageBracket->sort_order,
+                        'gender' => $participant->gender->value,
+                        'rows' => [],
+                    ];
+                }
+
                 $id = $participant->id;
 
-                if (! isset($totals[$id])) {
-                    $totals[$id] = [
+                if (! isset($groups[$groupKey]['rows'][$id])) {
+                    $groups[$groupKey]['rows'][$id] = [
                         'participant_id' => $id,
                         'first_name' => $participant->first_name,
                         'last_name' => $participant->last_name,
@@ -90,11 +129,36 @@ class CompetitionScoring
                     ];
                 }
 
-                $totals[$id]['points'] += $row['points'];
+                $groups[$groupKey]['rows'][$id]['points'] += $row['points'];
             }
         }
 
-        return $this->sortStandings(array_values($totals), 'last_name', 'first_name');
+        $sorted = collect($groups)
+            ->sortBy([
+                ['classification_sort_order', 'asc'],
+                ['classification', 'asc'],
+                ['age_bracket_sort_order', 'asc'],
+                ['age_bracket', 'asc'],
+                ['gender', 'asc'],
+            ])
+            ->map(function (array $group): array {
+                return [
+                    'classification_id' => $group['classification_id'],
+                    'classification' => $group['classification'],
+                    'age_bracket_id' => $group['age_bracket_id'],
+                    'age_bracket' => $group['age_bracket'],
+                    'gender' => $group['gender'],
+                    'standings' => $this->sortStandings(
+                        array_values($group['rows']),
+                        'last_name',
+                        'first_name',
+                    ),
+                ];
+            })
+            ->values()
+            ->all();
+
+        return $sorted;
     }
 
     /**
