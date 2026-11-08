@@ -161,17 +161,15 @@ class SampleInvitationalSeeder extends Seeder
                         $team = $teams[$teamCursor % $teams->count()];
                         $teamCursor++;
 
-                        $participant = Participant::query()->create([
+                        $participant = Participant::factory()->paid()->create([
                             'competition_id' => $competition->id,
                             'classification_id' => $classification->id,
                             'team_id' => $team->id,
-                            'first_name' => $this->firstName($gender, $teamCursor),
-                            'last_name' => $this->lastName($teamCursor),
                             'gender' => $gender,
-                            'birthdate' => Carbon::parse($def['sample_start'])
-                                ->addDays($index * 11)
-                                ->toDateString(),
-                            'paid' => true,
+                            'birthdate' => fake()->dateTimeBetween(
+                                $def['sample_start'],
+                                $def['sample_end'],
+                            )->format('Y-m-d'),
                         ]);
 
                         $sync->syncForPaid($participant);
@@ -236,25 +234,6 @@ class SampleInvitationalSeeder extends Seeder
                 'sample_end' => $competitionDate->copy()->subYears(10)->toDateString(),
             ],
         ];
-    }
-
-    private function firstName(ParticipantGender $gender, int $seed): string
-    {
-        $male = ['Noah', 'Liam', 'Mateo', 'Kai', 'Ethan', 'Owen', 'Leo', 'Miles'];
-        $female = ['Ava', 'Mia', 'Isla', 'Nora', 'Zoe', 'Luna', 'Ella', 'Ruby'];
-        $names = $gender === ParticipantGender::Male ? $male : $female;
-
-        return $names[($seed - 1) % count($names)];
-    }
-
-    private function lastName(int $seed): string
-    {
-        $names = [
-            'Santos', 'Reyes', 'Cruz', 'Garcia', 'Torres', 'Ramos', 'Flores', 'Navarro',
-            'Dela Cruz', 'Villanueva', 'Castillo', 'Mendoza', 'Aquino', 'Bautista', 'Rivera', 'Santiago',
-        ];
-
-        return $names[($seed - 1) % count($names)];
     }
 
     /**
