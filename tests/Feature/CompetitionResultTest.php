@@ -159,6 +159,48 @@ class CompetitionResultTest extends TestCase
                 ->where('options.0.id', $first->id)
                 ->where('options.2.id', $third->id)
                 ->has('options', 3)
+                ->has('options.0.name')
+                ->has('options.0.gender')
+                ->has('options.0.eligibilities', 1)
+            );
+    }
+
+    public function test_jump_options_include_classification_and_age_bracket_metadata(): void
+    {
+        $competition = Competition::factory()->create();
+        $classification = $competition->classifications()->create([
+            'name' => 'Developmental',
+            'parent_id' => null,
+            'sort_order' => 1,
+        ]);
+        $ageBracket = $classification->ageBrackets()->create([
+            'name' => '6 and under',
+            'start_birthday' => '2019-11-15',
+            'end_birthday' => '2026-11-14',
+            'sort_order' => 1,
+        ]);
+
+        $event = Event::factory()->create([
+            'competition_id' => $competition->id,
+            'name' => '25m Freestyle',
+            'gender' => 'male',
+            'sort_order' => 1,
+        ]);
+        $event->syncEligibilities([
+            [
+                'classification_id' => $classification->id,
+                'age_bracket_id' => $ageBracket->id,
+            ],
+        ]);
+
+        $this
+            ->actingAs(User::factory()->create())
+            ->get(route('competition-results.show', [$competition, $event]))
+            ->assertInertia(fn (AssertableInertia $page) => $page
+                ->where('options.0.name', '25m Freestyle')
+                ->where('options.0.gender', 'male')
+                ->where('options.0.eligibilities.0.classification', 'Developmental')
+                ->where('options.0.eligibilities.0.age_bracket', '6 and under')
             );
     }
 

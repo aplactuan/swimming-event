@@ -1,5 +1,10 @@
 <script setup lang="ts">
-import type { EventResult, EventResultEntry, ResultEventOption } from '@/types';
+import type {
+    EventResult,
+    EventResultEntry,
+    ResultEventOption,
+    ResultEventOptionEligibility,
+} from '@/types';
 import { Link, router } from '@inertiajs/vue3';
 import { computed, ref, watch } from 'vue';
 
@@ -26,6 +31,10 @@ const props = defineProps<{
 }>();
 
 const selectedAges = ref<number[]>([]);
+const selectedClassificationId = ref('');
+const selectedAgeBracketId = ref('');
+const selectedEventName = ref('');
+const selectedGender = ref('');
 
 const availableAges = computed(() =>
     props.ages.filter((age): age is number => age !== null && age !== undefined),
@@ -42,6 +51,82 @@ const filteredEntries = computed(() =>
                   && selectedAges.value.includes(entry.participant.age),
           ),
 );
+
+const currentOption = computed(() =>
+    props.options.find((option) => option.id === props.event?.id) ?? null,
+);
+
+const classificationOptions = computed(() => {
+    const byId = new Map<string, ResultEventOptionEligibility>();
+
+    for (const option of props.options) {
+        for (const eligibility of option.eligibilities) {
+            if (! byId.has(eligibility.classification_id)) {
+                byId.set(eligibility.classification_id, eligibility);
+            }
+        }
+    }
+
+    return [...byId.values()].sort(
+        (a, b) =>
+            a.classification_sort_order - b.classification_sort_order
+            || a.classification.localeCompare(b.classification),
+    );
+});
+
+const ageBracketOptions = computed(() => {
+    const byId = new Map<string, ResultEventOptionEligibility>();
+
+    for (const option of props.options) {
+        for (const eligibility of option.eligibilities) {
+            if (eligibility.classification_id !== selectedClassificationId.value) {
+                continue;
+            }
+
+            if (! byId.has(eligibility.age_bracket_id)) {
+                byId.set(eligibility.age_bracket_id, eligibility);
+            }
+        }
+    }
+
+    return [...byId.values()].sort(
+        (a, b) =>
+            a.age_bracket_sort_order - b.age_bracket_sort_order
+            || a.age_bracket.localeCompare(b.age_bracket),
+    );
+});
+
+const eventNameOptions = computed(() => {
+    const names = new Set<string>();
+
+    for (const option of props.options) {
+        if (! matchesEligibility(option, selectedClassificationId.value, selectedAgeBracketId.value)) {
+            continue;
+        }
+
+        names.add(option.name);
+    }
+
+    return [...names].sort((a, b) => a.localeCompare(b));
+});
+
+const genderOptions = computed(() => {
+    const genders = new Set<string>();
+
+    for (const option of props.options) {
+        if (option.name !== selectedEventName.value) {
+            continue;
+        }
+
+        if (! matchesEligibility(option, selectedClassificationId.value, selectedAgeBracketId.value)) {
+            continue;
+        }
+
+        genders.add(option.gender);
+    }
+
+    return [...genders].sort((a, b) => a.localeCompare(b));
+});
 
 const placeOf = (entry: EventResultEntry): string =>
     entry.status === 'ns' || entry.place === null ? '—' : String(entry.place);
@@ -78,8 +163,67 @@ const relaySwimmerNames = (entry: EventResultEntry): string =>
 const formatPoints = (value: number): string =>
     new Intl.NumberFormat('en-US', { maximumFractionDigits: 2 }).format(value);
 
+const formatGender = (gender: string): string => {
+    if (gender === 'female') {
+        return 'Female';
+    }
+
+    if (gender === 'mixed') {
+        return 'Mixed';
+    }
+
+    return 'Male';
+};
+
+const matchesEligibility = (
+    option: ResultEventOption,
+    classificationId: string,
+    ageBracketId: string,
+): boolean =>
+    option.eligibilities.some(
+        (eligibility) =>
+            eligibility.classification_id === classificationId
+            && eligibility.age_bracket_id === ageBracketId,
+    );
+
+const findMatchingEventId = (
+    classificationId: string,
+    ageBracketId: string,
+    eventName: string,
+    gender: string,
+): string | null => {
+    const match = props.options.find(
+        (option) =>
+            option.name === eventName
+            && option.gender === gender
+            && matchesEligibility(option, classificationId, ageBracketId),
+    );
+
+    return match?.id ?? null;
+};
+
+const syncJumpFromEvent = () => {
+    const option = currentOption.value;
+
+    if (! option) {
+        selectedClassificationId.value = '';
+        selectedAgeBracketId.value = '';
+        selectedEventName.value = '';
+        selectedGender.value = '';
+
+        return;
+    }
+
+    const eligibility = option.eligibilities[0];
+
+    selectedClassificationId.value = eligibility?.classification_id ?? '';
+    selectedAgeBracketId.value = eligibility?.age_bracket_id ?? '';
+    selectedEventName.value = option.name;
+    selectedGender.value = option.gender;
+};
+
 const goToEvent = (eventId: string | null) => {
-    if (! eventId) {
+    if (! eventId || eventId === props.event?.id) {
         return;
     }
 
@@ -90,11 +234,39 @@ const goToEvent = (eventId: string | null) => {
     );
 };
 
+const onClassificationChange = () => {
+    selectedAgeBracketId.value = '';
+    selectedEventName.value = '';
+    selectedGender.value = '';
+};
+
+const onAgeBracketChange = () => {
+    selectedEventName.value = '';
+    selectedGender.value = '';
+};
+
+const onEventNameChange = () => {
+    selectedGender.value = '';
+};
+
+const onGenderChange = () => {
+    goToEvent(
+        findMatchingEventId(
+            selectedClassificationId.value,
+            selectedAgeBracketId.value,
+            selectedEventName.value,
+            selectedGender.value,
+        ),
+    );
+};
+
 watch(
     () => props.event?.id,
     () => {
         selectedAges.value = [];
+        syncJumpFromEvent();
     },
+    { immediate: true },
 );
 </script>
 
@@ -127,43 +299,113 @@ watch(
         </div>
 
         <div v-if="event" class="sm-card">
-            <div class="flex flex-col gap-4 sm:flex-row sm:items-end">
-                <div class="flex-1">
-                    <label class="sm-label" for="result-jump">Jump to event</label>
+            <div class="sm-label">Jump to event</div>
+            <div class="mt-3 grid gap-3 sm:grid-cols-2 xl:grid-cols-4">
+                <div>
+                    <label class="text-xs font-semibold uppercase tracking-[0.12em] text-ink-muted" for="result-jump-classification">
+                        Classification
+                    </label>
                     <select
-                        id="result-jump"
+                        id="result-jump-classification"
+                        v-model="selectedClassificationId"
                         class="mt-1 w-full rounded-lg border-surface-muted text-sm focus:border-pool focus:ring-pool"
-                        :value="event.id"
-                        @change="goToEvent(($event.target as HTMLSelectElement).value)"
+                        @change="onClassificationChange"
                     >
+                        <option disabled value="">Select classification</option>
                         <option
-                            v-for="option in options"
-                            :key="option.id"
-                            :value="option.id"
+                            v-for="option in classificationOptions"
+                            :key="option.classification_id"
+                            :value="option.classification_id"
                         >
-                            {{ option.label }}
+                            {{ option.classification }}
                         </option>
                     </select>
                 </div>
 
-                <div class="flex gap-2">
-                    <button
-                        type="button"
-                        class="sm-btn-secondary disabled:cursor-not-allowed disabled:opacity-40"
-                        :disabled="previous_event_id === null"
-                        @click="goToEvent(previous_event_id)"
+                <div>
+                    <label class="text-xs font-semibold uppercase tracking-[0.12em] text-ink-muted" for="result-jump-age-bracket">
+                        Age bracket
+                    </label>
+                    <select
+                        id="result-jump-age-bracket"
+                        v-model="selectedAgeBracketId"
+                        class="mt-1 w-full rounded-lg border-surface-muted text-sm focus:border-pool focus:ring-pool"
+                        :disabled="selectedClassificationId === ''"
+                        @change="onAgeBracketChange"
                     >
-                        ← Previous
-                    </button>
-                    <button
-                        type="button"
-                        class="sm-btn-secondary disabled:cursor-not-allowed disabled:opacity-40"
-                        :disabled="next_event_id === null"
-                        @click="goToEvent(next_event_id)"
-                    >
-                        Next →
-                    </button>
+                        <option disabled value="">Select age bracket</option>
+                        <option
+                            v-for="option in ageBracketOptions"
+                            :key="option.age_bracket_id"
+                            :value="option.age_bracket_id"
+                        >
+                            {{ option.age_bracket }}
+                        </option>
+                    </select>
                 </div>
+
+                <div>
+                    <label class="text-xs font-semibold uppercase tracking-[0.12em] text-ink-muted" for="result-jump-event">
+                        Event
+                    </label>
+                    <select
+                        id="result-jump-event"
+                        v-model="selectedEventName"
+                        class="mt-1 w-full rounded-lg border-surface-muted text-sm focus:border-pool focus:ring-pool"
+                        :disabled="selectedAgeBracketId === ''"
+                        @change="onEventNameChange"
+                    >
+                        <option disabled value="">Select event</option>
+                        <option
+                            v-for="name in eventNameOptions"
+                            :key="name"
+                            :value="name"
+                        >
+                            {{ name }}
+                        </option>
+                    </select>
+                </div>
+
+                <div>
+                    <label class="text-xs font-semibold uppercase tracking-[0.12em] text-ink-muted" for="result-jump-gender">
+                        Gender
+                    </label>
+                    <select
+                        id="result-jump-gender"
+                        v-model="selectedGender"
+                        class="mt-1 w-full rounded-lg border-surface-muted text-sm focus:border-pool focus:ring-pool"
+                        :disabled="selectedEventName === ''"
+                        @change="onGenderChange"
+                    >
+                        <option disabled value="">Select gender</option>
+                        <option
+                            v-for="gender in genderOptions"
+                            :key="gender"
+                            :value="gender"
+                        >
+                            {{ formatGender(gender) }}
+                        </option>
+                    </select>
+                </div>
+            </div>
+
+            <div class="mt-4 flex gap-2">
+                <button
+                    type="button"
+                    class="sm-btn-secondary disabled:cursor-not-allowed disabled:opacity-40"
+                    :disabled="previous_event_id === null"
+                    @click="goToEvent(previous_event_id)"
+                >
+                    ← Previous
+                </button>
+                <button
+                    type="button"
+                    class="sm-btn-secondary disabled:cursor-not-allowed disabled:opacity-40"
+                    :disabled="next_event_id === null"
+                    @click="goToEvent(next_event_id)"
+                >
+                    Next →
+                </button>
             </div>
         </div>
 

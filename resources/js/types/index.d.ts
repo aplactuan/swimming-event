@@ -130,9 +130,21 @@ export interface RaceHeat {
     lanes: HeatLane[];
 }
 
+export interface ResultEventOptionEligibility {
+    classification_id: string;
+    classification: string;
+    classification_sort_order: number;
+    age_bracket_id: string;
+    age_bracket: string;
+    age_bracket_sort_order: number;
+}
+
 export interface ResultEventOption {
     id: string;
     label: string;
+    name: string;
+    gender: EventGender;
+    eligibilities: ResultEventOptionEligibility[];
 }
 
 export interface EventResult {

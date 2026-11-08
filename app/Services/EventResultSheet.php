@@ -22,7 +22,20 @@ class EventResultSheet
      *     event: array{id: string, name: string, gender: string, type: string, label: string},
      *     entries: array<int, mixed>,
      *     ages: list<int|null>,
-     *     options: list<array{id: string, label: string}>,
+     *     options: list<array{
+     *         id: string,
+     *         label: string,
+     *         name: string,
+     *         gender: string,
+     *         eligibilities: list<array{
+     *             classification_id: string,
+     *             classification: string,
+     *             classification_sort_order: int,
+     *             age_bracket_id: string,
+     *             age_bracket: string,
+     *             age_bracket_sort_order: int
+     *         }>
+     *     }>,
      *     position: int,
      *     total: int,
      *     previous_event_id: string|null,
@@ -65,16 +78,63 @@ class EventResultSheet
                 ->values()
                 ->all(),
             'options' => $events
-                ->map(fn (Event $candidate): array => [
-                    'id' => $candidate->id,
-                    'label' => $this->sequence->eventLabel($candidate),
-                ])
+                ->map(fn (Event $candidate): array => $this->optionPayload($candidate))
                 ->values()
                 ->all(),
             'position' => $position + 1,
             'total' => $events->count(),
             'previous_event_id' => $position > 0 ? $events[$position - 1]->id : null,
             'next_event_id' => $events->get($position + 1)?->id,
+        ];
+    }
+
+    /**
+     * @return array{
+     *     id: string,
+     *     label: string,
+     *     name: string,
+     *     gender: string,
+     *     eligibilities: list<array{
+     *         classification_id: string,
+     *         classification: string,
+     *         classification_sort_order: int,
+     *         age_bracket_id: string,
+     *         age_bracket: string,
+     *         age_bracket_sort_order: int
+     *     }>
+     * }
+     */
+    private function optionPayload(Event $event): array
+    {
+        $eligibilities = $event->eligibilities
+            ->map(fn ($eligibility): array => [
+                'classification_id' => (string) $eligibility->classification_id,
+                'classification' => $eligibility->classification?->name ?? '—',
+                'classification_sort_order' => (int) ($eligibility->classification?->sort_order ?? PHP_INT_MAX),
+                'age_bracket_id' => (string) $eligibility->age_bracket_id,
+                'age_bracket' => $eligibility->ageBracket?->name ?? '—',
+                'age_bracket_sort_order' => (int) ($eligibility->ageBracket?->sort_order ?? PHP_INT_MAX),
+            ])
+            ->values()
+            ->all();
+
+        if ($eligibilities === []) {
+            $eligibilities = [[
+                'classification_id' => '',
+                'classification' => '—',
+                'classification_sort_order' => PHP_INT_MAX,
+                'age_bracket_id' => '',
+                'age_bracket' => '—',
+                'age_bracket_sort_order' => PHP_INT_MAX,
+            ]];
+        }
+
+        return [
+            'id' => $event->id,
+            'label' => $this->sequence->eventLabel($event),
+            'name' => $event->name,
+            'gender' => $event->gender->value,
+            'eligibilities' => $eligibilities,
         ];
     }
 
