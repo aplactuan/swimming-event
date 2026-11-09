@@ -84,6 +84,7 @@ const teamFormModal = ref<{ open: (team?: Team) => void } | null>(null);
 const deleteTeamModal = ref<{ open: (team: Team) => void } | null>(null);
 const pointRulesModal = ref<{ open: (rules: CompetitionPointRule[]) => void } | null>(null);
 const resultsPdfClassificationId = ref('');
+const programPdfClassificationId = ref('');
 
 const resultsPdfHref = computed(() => {
     const params: Record<string, string> = {
@@ -95,6 +96,18 @@ const resultsPdfHref = computed(() => {
     }
 
     return route('competition-results.pdf', params);
+});
+
+const programPdfHref = computed(() => {
+    const params: Record<string, string> = {
+        competition: props.competition.id,
+    };
+
+    if (programPdfClassificationId.value !== '') {
+        params.classification_id = programPdfClassificationId.value;
+    }
+
+    return route('competition-program.pdf', params);
 });
 
 /**
@@ -927,30 +940,58 @@ const formatParticipantName = (participant: Participant) =>
                             </button>
                         </div>
 
-                        <div class="mt-3 flex flex-col gap-2 border-t border-surface-muted pt-3 sm:flex-row sm:items-end">
-                            <div class="min-w-0 flex-1">
-                                <label class="sm-label" for="results-pdf-scope">Results PDF</label>
-                                <select
-                                    id="results-pdf-scope"
-                                    v-model="resultsPdfClassificationId"
-                                    class="sm-input mt-1 block w-full"
-                                >
-                                    <option value="">All events</option>
-                                    <option
-                                        v-for="classification in rootClassifications"
-                                        :key="classification.id"
-                                        :value="classification.id"
+                        <div class="mt-3 space-y-3 border-t border-surface-muted pt-3">
+                            <div class="flex flex-col gap-2 sm:flex-row sm:items-end">
+                                <div class="min-w-0 flex-1">
+                                    <label class="sm-label" for="program-pdf-scope">Meet program PDF</label>
+                                    <select
+                                        id="program-pdf-scope"
+                                        v-model="programPdfClassificationId"
+                                        class="sm-input mt-1 block w-full"
                                     >
-                                        {{ classification.name }}
-                                    </option>
-                                </select>
+                                        <option value="">All events</option>
+                                        <option
+                                            v-for="classification in rootClassifications"
+                                            :key="classification.id"
+                                            :value="classification.id"
+                                        >
+                                            {{ classification.name }}
+                                        </option>
+                                    </select>
+                                </div>
+                                <a
+                                    :href="programPdfHref"
+                                    class="sm-btn-secondary justify-center sm:shrink-0"
+                                >
+                                    Download program
+                                </a>
                             </div>
-                            <a
-                                :href="resultsPdfHref"
-                                class="sm-btn-secondary justify-center sm:shrink-0"
-                            >
-                                Download PDF
-                            </a>
+
+                            <div class="flex flex-col gap-2 sm:flex-row sm:items-end">
+                                <div class="min-w-0 flex-1">
+                                    <label class="sm-label" for="results-pdf-scope">Results PDF</label>
+                                    <select
+                                        id="results-pdf-scope"
+                                        v-model="resultsPdfClassificationId"
+                                        class="sm-input mt-1 block w-full"
+                                    >
+                                        <option value="">All events</option>
+                                        <option
+                                            v-for="classification in rootClassifications"
+                                            :key="classification.id"
+                                            :value="classification.id"
+                                        >
+                                            {{ classification.name }}
+                                        </option>
+                                    </select>
+                                </div>
+                                <a
+                                    :href="resultsPdfHref"
+                                    class="sm-btn-secondary justify-center sm:shrink-0"
+                                >
+                                    Download results
+                                </a>
+                            </div>
                         </div>
                     </div>
 
