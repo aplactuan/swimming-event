@@ -167,6 +167,27 @@ const formatEligibilitySummary = (event: CompetitionEvent) =>
 const formatParticipantName = (participant: Participant) =>
     `${participant.last_name}, ${participant.first_name}`;
 
+const isGuestLane = (lane: HeatLane): boolean =>
+    lane.entry_event_id !== null && lane.entry_event_id !== props.event.id;
+
+const guestLaneLabel = (lane: HeatLane): string => {
+    const entryEvent = lane.entry_event;
+
+    if (! entryEvent) {
+        return 'Guest';
+    }
+
+    const brackets = entryEvent.eligibilities
+        .map((row) => row.age_bracket?.name)
+        .filter((name): name is string => Boolean(name));
+
+    if (brackets.length > 0) {
+        return brackets.join(' / ');
+    }
+
+    return entryEvent.name;
+};
+
 const formatShortDate = (value: string) =>
     new Intl.DateTimeFormat('en-US', {
         month: 'short',
@@ -449,6 +470,9 @@ const laneClass = (lane: HeatLane) => [
                                             <span class="block truncate text-xs text-ink-muted">
                                                 {{ lane.participant.team }}
                                                 · {{ lane.participant.age }} yrs
+                                                <template v-if="isGuestLane(lane)">
+                                                    · Guest · {{ guestLaneLabel(lane) }}
+                                                </template>
                                             </span>
                                         </span>
                                         <span v-else-if="lane.team" class="min-w-0 flex-1">
