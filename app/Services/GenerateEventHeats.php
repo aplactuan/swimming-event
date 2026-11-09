@@ -16,8 +16,9 @@ class GenerateEventHeats
      * Rebuild the heats for every event in the competition.
      *
      * Compatible individual events (same name and gender) pack full heats and
-     * fill leftover lanes with guests from the next event in program order.
-     * Guests keep scoring under their home event via entry_event_id.
+     * fill leftover lanes with guests from later events whose age bracket is
+     * adjacent in the same classification. Guests keep scoring under their
+     * home event via entry_event_id.
      *
      * @return array{events: int, heats: int} The number of events seeded and heats created.
      */
@@ -27,7 +28,7 @@ class GenerateEventHeats
 
         /** @var Collection<int, Event> $events */
         $events = $competition->events()
-            ->with(['participants', 'teams'])
+            ->with(['participants', 'teams', 'eligibilities.ageBracket'])
             ->orderBy('sort_order')
             ->get();
 
@@ -149,7 +150,7 @@ class GenerateEventHeats
 
     /**
      * Pack compatible individual events: full heats first, then fill the last
-     * heat's empty lanes with guests from later events in the group.
+     * heat's empty lanes with guests from later age-adjacent events.
      *
      * @param  list<Event>  $events
      * @return array{events: int, heats: int}
@@ -201,6 +202,11 @@ class GenerateEventHeats
                         $donorIndex++
                     ) {
                         $donor = $events[$donorIndex];
+
+                        if (! $this->haveAdjacentAgeBrackets($event, $donor)) {
+                            continue;
+                        }
+
                         $available = $queues[$donor->id];
 
                         if ($available === []) {
@@ -238,6 +244,48 @@ class GenerateEventHeats
         }
 
         return ['events' => $seededEvents, 'heats' => $heats];
+    }
+
+    /**
+     * Whether two events share a classification with neighbouring age brackets.
+     *
+     * Neighbouring means the age-bracket sort orders differ by exactly one, so
+     * "6 and under" can fill with "7" but not with "8 and over".
+     */
+    private function haveAdjacentAgeBrackets(Event $host, Event $donor): bool
+    {
+        $hostEligibilities = $host->eligibilities;
+        $donorEligibilities = $donor->eligibilities;
+
+        if ($hostEligibilities->isEmpty() || $donorEligibilities->isEmpty()) {
+            return false;
+        }
+
+        $sharedClassificationIds = $hostEligibilities
+            ->pluck('classification_id')
+            ->intersect($donorEligibilities->pluck('classification_id'));
+
+        foreach ($sharedClassificationIds as $classificationId) {
+            $hostOrders = $hostEligibilities
+                ->where('classification_id', $classificationId)
+                ->map(fn ($eligibility): ?int => $eligibility->ageBracket?->sort_order)
+                ->filter(fn (?int $order): bool => $order !== null);
+
+            $donorOrders = $donorEligibilities
+                ->where('classification_id', $classificationId)
+                ->map(fn ($eligibility): ?int => $eligibility->ageBracket?->sort_order)
+                ->filter(fn (?int $order): bool => $order !== null);
+
+            foreach ($hostOrders as $hostOrder) {
+                foreach ($donorOrders as $donorOrder) {
+                    if (abs($hostOrder - $donorOrder) === 1) {
+                        return true;
+                    }
+                }
+            }
+        }
+
+        return false;
     }
 
     /**
