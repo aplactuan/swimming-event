@@ -83,6 +83,19 @@ const deleteParticipantModal = ref<{ open: (participant: Participant) => void } 
 const teamFormModal = ref<{ open: (team?: Team) => void } | null>(null);
 const deleteTeamModal = ref<{ open: (team: Team) => void } | null>(null);
 const pointRulesModal = ref<{ open: (rules: CompetitionPointRule[]) => void } | null>(null);
+const resultsPdfClassificationId = ref('');
+
+const resultsPdfHref = computed(() => {
+    const params: Record<string, string> = {
+        competition: props.competition.id,
+    };
+
+    if (resultsPdfClassificationId.value !== '') {
+        params.classification_id = resultsPdfClassificationId.value;
+    }
+
+    return route('competition-results.pdf', params);
+});
 
 /**
  * The competition with its teams attached, for modals that need the team list.
@@ -912,6 +925,32 @@ const formatParticipantName = (participant: Participant) =>
                             >
                                 Add event
                             </button>
+                        </div>
+
+                        <div class="mt-3 flex flex-col gap-2 border-t border-surface-muted pt-3 sm:flex-row sm:items-end">
+                            <div class="min-w-0 flex-1">
+                                <label class="sm-label" for="results-pdf-scope">Results PDF</label>
+                                <select
+                                    id="results-pdf-scope"
+                                    v-model="resultsPdfClassificationId"
+                                    class="sm-input mt-1 block w-full"
+                                >
+                                    <option value="">All events</option>
+                                    <option
+                                        v-for="classification in rootClassifications"
+                                        :key="classification.id"
+                                        :value="classification.id"
+                                    >
+                                        {{ classification.name }}
+                                    </option>
+                                </select>
+                            </div>
+                            <a
+                                :href="resultsPdfHref"
+                                class="sm-btn-secondary justify-center sm:shrink-0"
+                            >
+                                Download PDF
+                            </a>
                         </div>
                     </div>
 
