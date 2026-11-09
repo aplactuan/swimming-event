@@ -16,6 +16,7 @@ use Illuminate\Database\Eloquent\Relations\HasMany;
     'heat_id',
     'participant_id',
     'team_id',
+    'entry_event_id',
     'lane_number',
     'finish_time_hundredths',
     'status',
@@ -105,6 +106,30 @@ class HeatLane extends Model
     public function team(): BelongsTo
     {
         return $this->belongsTo(Team::class);
+    }
+
+    /**
+     * Get the event this lane scores under (home event for guests).
+     */
+    public function entryEvent(): BelongsTo
+    {
+        return $this->belongsTo(Event::class, 'entry_event_id');
+    }
+
+    /**
+     * Whether this lane's swimmer belongs to a different event than the heat.
+     */
+    public function isGuest(): bool
+    {
+        if ($this->entry_event_id === null || ! $this->isAssigned()) {
+            return false;
+        }
+
+        $heatEventId = $this->relationLoaded('heat')
+            ? $this->heat?->event_id
+            : $this->heat()->value('event_id');
+
+        return $heatEventId !== null && $this->entry_event_id !== $heatEventId;
     }
 
     /**

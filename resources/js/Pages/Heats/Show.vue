@@ -223,6 +223,27 @@ const laneName = (lane: HeatLane) => {
     return lane.team?.name ?? '—';
 };
 
+const isGuestLane = (lane: HeatLane): boolean =>
+    lane.entry_event_id !== null && lane.entry_event_id !== props.heat.event.id;
+
+const guestLaneLabel = (lane: HeatLane): string => {
+    const entryEvent = lane.entry_event;
+
+    if (! entryEvent) {
+        return 'Guest';
+    }
+
+    const brackets = entryEvent.eligibilities
+        .map((row) => row.age_bracket?.name)
+        .filter((name): name is string => Boolean(name));
+
+    if (brackets.length > 0) {
+        return brackets.join(' / ');
+    }
+
+    return entryEvent.name;
+};
+
 const relaySwimmerNames = (lane: HeatLane): string =>
     (lane.relay_swimmers ?? [])
         .filter((swimmer) => swimmer.participant !== null)
@@ -341,6 +362,9 @@ const relaySwimmerNames = (lane: HeatLane): string =>
                                     {{ lane.participant.team }}
                                     <template v-if="lane.participant.classification">
                                         · {{ lane.participant.classification.name }}
+                                    </template>
+                                    <template v-if="isGuestLane(lane)">
+                                        · Guest · {{ guestLaneLabel(lane) }}
                                     </template>
                                 </div>
                                 <div v-else-if="isRelay" class="truncate text-sm text-ink-muted">

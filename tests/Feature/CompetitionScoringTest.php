@@ -112,11 +112,43 @@ class CompetitionScoringTest extends TestCase
         $this->assertSame([1 => 10.0], $map);
     }
 
+    public function test_guest_lanes_score_under_their_entry_event(): void
+    {
+        $competition = Competition::factory()->create();
+        $host = Event::factory()->create([
+            'competition_id' => $competition->id,
+            'name' => '25m Breaststroke',
+            'gender' => 'male',
+        ]);
+        $donor = Event::factory()->create([
+            'competition_id' => $competition->id,
+            'name' => '25m Breaststroke',
+            'gender' => 'male',
+        ]);
+        $heat = Heat::factory()->create(['event_id' => $host->id]);
+
+        $home = $this->lane($heat, $competition, 2800, HeatLaneStatus::Swam, $host->id);
+        $guest = $this->lane($heat, $competition, 2700, HeatLaneStatus::Swam, $donor->id);
+
+        $hostScored = app(CompetitionScoring::class)->scoreEvent($host, $competition);
+        $donorScored = app(CompetitionScoring::class)->scoreEvent($donor, $competition);
+
+        $this->assertCount(1, $hostScored);
+        $this->assertSame($home->id, $hostScored[0]['lane']->id);
+        $this->assertSame(1, $hostScored[0]['place']);
+
+        $this->assertCount(1, $donorScored);
+        $this->assertSame($guest->id, $donorScored[0]['lane']->id);
+        $this->assertSame(1, $donorScored[0]['place']);
+        $this->assertSame(8.0, $donorScored[0]['points']);
+    }
+
     private function lane(
         Heat $heat,
         Competition $competition,
         ?int $hundredths,
         HeatLaneStatus $status = HeatLaneStatus::Swam,
+        ?string $entryEventId = null,
     ): \App\Models\HeatLane {
         $participant = Participant::factory()->create([
             'competition_id' => $competition->id,
@@ -126,6 +158,7 @@ class CompetitionScoringTest extends TestCase
         return $heat->lanes()->create([
             'lane_number' => $heat->lanes()->count() + 1,
             'participant_id' => $participant->id,
+            'entry_event_id' => $entryEventId ?? $heat->event_id,
             'finish_time_hundredths' => $hundredths,
             'status' => $status,
         ]);

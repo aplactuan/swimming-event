@@ -8,6 +8,7 @@ use App\Models\Event;
 use App\Models\Heat;
 use App\Models\HeatLane;
 use App\Models\Participant;
+use App\Models\Team;
 use App\Models\User;
 use App\Services\GenerateEventHeats;
 use Illuminate\Foundation\Testing\RefreshDatabase;
@@ -189,8 +190,18 @@ class GenerateEventHeatsTest extends TestCase
     public function test_it_generates_heats_for_every_event_in_the_competition(): void
     {
         $competition = Competition::factory()->create(['number_of_lane' => 5]);
-        $firstEvent = Event::factory()->create(['competition_id' => $competition->id]);
-        $secondEvent = Event::factory()->create(['competition_id' => $competition->id]);
+        $firstEvent = Event::factory()->create([
+            'competition_id' => $competition->id,
+            'name' => '25m Freestyle',
+            'gender' => 'male',
+            'sort_order' => 1,
+        ]);
+        $secondEvent = Event::factory()->create([
+            'competition_id' => $competition->id,
+            'name' => '25m Breaststroke',
+            'gender' => 'female',
+            'sort_order' => 2,
+        ]);
         $this->enterParticipants($firstEvent, 12);
         $this->enterParticipants($secondEvent, 4);
 
@@ -203,6 +214,173 @@ class GenerateEventHeatsTest extends TestCase
 
         $this->assertSame([4, 4, 4], $this->swimmersPerHeat($firstEvent));
         $this->assertSame([4], $this->swimmersPerHeat($secondEvent));
+    }
+
+    public function test_generate_all_fills_underfilled_heats_from_the_next_compatible_event(): void
+    {
+        $competition = Competition::factory()->create(['number_of_lane' => 5]);
+        $host = Event::factory()->create([
+            'competition_id' => $competition->id,
+            'name' => '25m Breaststroke',
+            'gender' => 'male',
+            'sort_order' => 1,
+        ]);
+        $donor = Event::factory()->create([
+            'competition_id' => $competition->id,
+            'name' => '25m Breaststroke',
+            'gender' => 'male',
+            'sort_order' => 2,
+        ]);
+        $this->enterParticipants($host, 7);
+        $donorParticipants = $this->enterParticipants($donor, 2);
+
+        app(GenerateEventHeats::class)->generateForCompetition($competition);
+
+        $this->assertSame([5, 4], $this->swimmersPerHeat($host));
+        $this->assertSame(0, $donor->heats()->count());
+
+        $guestLanes = $host->heatLanes()
+            ->where('entry_event_id', $donor->id)
+            ->get();
+
+        $this->assertCount(2, $guestLanes);
+        $this->assertEqualsCanonicalizing(
+            collect($donorParticipants)->pluck('id')->all(),
+            $guestLanes->pluck('participant_id')->all(),
+        );
+
+        $this->assertSame(
+            7,
+            $host->heatLanes()->where('entry_event_id', $host->id)->whereNotNull('participant_id')->count(),
+        );
+    }
+
+    public function test_generate_all_does_not_borrow_from_incompatible_events(): void
+    {
+        $competition = Competition::factory()->create(['number_of_lane' => 5]);
+        $host = Event::factory()->create([
+            'competition_id' => $competition->id,
+            'name' => '25m Breaststroke',
+            'gender' => 'male',
+            'sort_order' => 1,
+        ]);
+        $otherStroke = Event::factory()->create([
+            'competition_id' => $competition->id,
+            'name' => '25m Freestyle',
+            'gender' => 'male',
+            'sort_order' => 2,
+        ]);
+        $otherGender = Event::factory()->create([
+            'competition_id' => $competition->id,
+            'name' => '25m Breaststroke',
+            'gender' => 'female',
+            'sort_order' => 3,
+        ]);
+        $this->enterParticipants($host, 2);
+        $this->enterParticipants($otherStroke, 3);
+        $this->enterParticipants($otherGender, 3);
+
+        app(GenerateEventHeats::class)->generateForCompetition($competition);
+
+        $this->assertSame([2], $this->swimmersPerHeat($host));
+        $this->assertSame(0, $host->heatLanes()->where('entry_event_id', '!=', $host->id)->count());
+        $this->assertSame([3], $this->swimmersPerHeat($otherStroke));
+        $this->assertSame([3], $this->swimmersPerHeat($otherGender));
+    }
+
+    public function test_single_event_generate_does_not_cross_fill_from_siblings(): void
+    {
+        $competition = Competition::factory()->create(['number_of_lane' => 5]);
+        $host = Event::factory()->create([
+            'competition_id' => $competition->id,
+            'name' => '25m Breaststroke',
+            'gender' => 'male',
+            'sort_order' => 1,
+        ]);
+        $donor = Event::factory()->create([
+            'competition_id' => $competition->id,
+            'name' => '25m Breaststroke',
+            'gender' => 'male',
+            'sort_order' => 2,
+        ]);
+        $this->enterParticipants($host, 2);
+        $this->enterParticipants($donor, 3);
+
+        app(GenerateEventHeats::class)->generate($host);
+
+        $this->assertSame([2], $this->swimmersPerHeat($host));
+        $this->assertSame(0, $host->heatLanes()->where('entry_event_id', $donor->id)->count());
+        $this->assertSame(0, $donor->heats()->count());
+    }
+
+    public function test_generate_all_does_not_cross_fill_relay_events(): void
+    {
+        $competition = Competition::factory()->create(['number_of_lane' => 5]);
+        $relay = Event::factory()->relay()->create([
+            'competition_id' => $competition->id,
+            'name' => '4x25 Free Relay',
+            'gender' => 'mixed',
+            'sort_order' => 1,
+        ]);
+        $otherRelay = Event::factory()->relay()->create([
+            'competition_id' => $competition->id,
+            'name' => '4x25 Free Relay',
+            'gender' => 'mixed',
+            'sort_order' => 2,
+        ]);
+        $teams = Team::factory()->count(2)->create(['competition_id' => $competition->id]);
+        $moreTeams = Team::factory()->count(3)->create(['competition_id' => $competition->id]);
+        $relay->teams()->attach($teams->pluck('id'));
+        $otherRelay->teams()->attach($moreTeams->pluck('id'));
+
+        app(GenerateEventHeats::class)->generateForCompetition($competition);
+
+        $this->assertSame(1, $relay->heats()->count());
+        $this->assertSame(
+            2,
+            $relay->heatLanes()->whereNotNull('team_id')->count(),
+        );
+        $this->assertSame(
+            0,
+            $relay->heatLanes()->where('entry_event_id', $otherRelay->id)->count(),
+        );
+        $this->assertSame(1, $otherRelay->heats()->count());
+        $this->assertSame(
+            3,
+            $otherRelay->heatLanes()->whereNotNull('team_id')->count(),
+        );
+    }
+
+    public function test_lane_swap_preserves_entry_event_with_the_swimmer(): void
+    {
+        [$competition, $event] = $this->competitionWithEvent();
+        $heat = Heat::factory()->create(['event_id' => $event->id]);
+        [$alice, $bob] = $this->enterParticipants($event, 2);
+        $guestEvent = Event::factory()->create([
+            'competition_id' => $competition->id,
+            'name' => $event->name,
+            'gender' => $event->gender,
+        ]);
+
+        $homeLane = $heat->assignLane(2, $alice);
+        $guestLane = $heat->lanes()->create([
+            'lane_number' => 3,
+            'participant_id' => $bob->id,
+            'entry_event_id' => $guestEvent->id,
+        ]);
+
+        $this
+            ->actingAs(User::factory()->create())
+            ->patch(route('event-heat-lanes.swap', [$competition, $event]), [
+                'from_lane_id' => $homeLane->id,
+                'to_lane_id' => $guestLane->id,
+            ])
+            ->assertSessionHasNoErrors();
+
+        $this->assertSame($bob->id, $homeLane->fresh()->participant_id);
+        $this->assertSame($guestEvent->id, $homeLane->fresh()->entry_event_id);
+        $this->assertSame($alice->id, $guestLane->fresh()->participant_id);
+        $this->assertSame($event->id, $guestLane->fresh()->entry_event_id);
     }
 
     public function test_generating_for_every_event_skips_events_without_participants(): void

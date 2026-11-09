@@ -50,6 +50,8 @@ class CompetitionHeatController extends Controller
             'lanes.participant.classification',
             'lanes.participant.team',
             'lanes.team',
+            'lanes.entryEvent.eligibilities.classification',
+            'lanes.entryEvent.eligibilities.ageBracket',
             'lanes.relaySwimmers.participant',
         ]);
 
