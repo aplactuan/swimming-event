@@ -4,10 +4,13 @@ namespace App\Http\Controllers;
 
 use App\Models\Competition;
 use App\Models\Event;
+use App\Services\CompetitionResultsPdf;
 use App\Services\EventResultSheet;
 use Illuminate\Http\RedirectResponse;
+use Illuminate\Http\Request;
 use Inertia\Inertia;
 use Inertia\Response;
+use Symfony\Component\HttpFoundation\Response as SymfonyResponse;
 
 class CompetitionResultController extends Controller
 {
@@ -36,5 +39,24 @@ class CompetitionResultController extends Controller
         EventResultSheet $sheet,
     ): Response {
         return Inertia::render('Results/Show', $sheet->payload($competition, $event));
+    }
+
+    /**
+     * Download a Meet Manager-style results PDF for all events or one classification.
+     */
+    public function pdf(
+        Request $request,
+        Competition $competition,
+        CompetitionResultsPdf $resultsPdf,
+    ): SymfonyResponse {
+        $classification = null;
+
+        if ($request->filled('classification_id')) {
+            $classification = $competition->classifications()
+                ->whereKey($request->string('classification_id')->toString())
+                ->firstOrFail();
+        }
+
+        return $resultsPdf->download($competition, $classification);
     }
 }

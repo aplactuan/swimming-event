@@ -44,6 +44,8 @@ Route::middleware(['auth', 'verified'])->group(function () {
         ->name('competition-heats.times.update');
     Route::get('/competitions/{competition}/results', [CompetitionResultController::class, 'index'])
         ->name('competition-results.index');
+    Route::get('/competitions/{competition}/results-pdf', [CompetitionResultController::class, 'pdf'])
+        ->name('competition-results.pdf');
     Route::get('/competitions/{competition}/results/{event}', [CompetitionResultController::class, 'show'])
         ->name('competition-results.show');
     Route::get('/competitions/{competition}/standings', [CompetitionStandingController::class, 'index'])
