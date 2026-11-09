@@ -2,6 +2,7 @@
 
 namespace Tests\Feature;
 
+use App\Models\AgeBracket;
 use App\Models\Classification;
 use App\Models\Competition;
 use App\Models\Event;
@@ -231,6 +232,8 @@ class GenerateEventHeatsTest extends TestCase
             'gender' => 'male',
             'sort_order' => 2,
         ]);
+        $this->attachAgeBracketEligibility($host, '6 and under', 1);
+        $this->attachAgeBracketEligibility($donor, '7', 2, $host->eligibilities->first()->classification_id);
         $this->enterParticipants($host, 7);
         $donorParticipants = $this->enterParticipants($donor, 2);
 
@@ -253,6 +256,63 @@ class GenerateEventHeatsTest extends TestCase
             7,
             $host->heatLanes()->where('entry_event_id', $host->id)->whereNotNull('participant_id')->count(),
         );
+    }
+
+    public function test_generate_all_does_not_merge_distant_age_brackets(): void
+    {
+        $competition = Competition::factory()->create(['number_of_lane' => 5]);
+        $host = Event::factory()->create([
+            'competition_id' => $competition->id,
+            'name' => '25m Breaststroke',
+            'gender' => 'male',
+            'sort_order' => 1,
+        ]);
+        $distant = Event::factory()->create([
+            'competition_id' => $competition->id,
+            'name' => '25m Breaststroke',
+            'gender' => 'male',
+            'sort_order' => 2,
+        ]);
+        $this->attachAgeBracketEligibility($host, '6 and under', 1);
+        $this->attachAgeBracketEligibility(
+            $distant,
+            '8 and over',
+            3,
+            $host->eligibilities->first()->classification_id,
+        );
+        $this->enterParticipants($host, 2);
+        $this->enterParticipants($distant, 3);
+
+        app(GenerateEventHeats::class)->generateForCompetition($competition);
+
+        $this->assertSame([2], $this->swimmersPerHeat($host));
+        $this->assertSame(0, $host->heatLanes()->where('entry_event_id', $distant->id)->count());
+        $this->assertSame([3], $this->swimmersPerHeat($distant));
+    }
+
+    public function test_generate_all_does_not_cross_fill_without_age_brackets(): void
+    {
+        $competition = Competition::factory()->create(['number_of_lane' => 5]);
+        $host = Event::factory()->create([
+            'competition_id' => $competition->id,
+            'name' => '25m Breaststroke',
+            'gender' => 'male',
+            'sort_order' => 1,
+        ]);
+        $donor = Event::factory()->create([
+            'competition_id' => $competition->id,
+            'name' => '25m Breaststroke',
+            'gender' => 'male',
+            'sort_order' => 2,
+        ]);
+        $this->enterParticipants($host, 2);
+        $this->enterParticipants($donor, 3);
+
+        app(GenerateEventHeats::class)->generateForCompetition($competition);
+
+        $this->assertSame([2], $this->swimmersPerHeat($host));
+        $this->assertSame(0, $host->heatLanes()->where('entry_event_id', $donor->id)->count());
+        $this->assertSame([3], $this->swimmersPerHeat($donor));
     }
 
     public function test_generate_all_does_not_borrow_from_incompatible_events(): void
@@ -553,6 +613,34 @@ class GenerateEventHeatsTest extends TestCase
         $event = Event::factory()->create(['competition_id' => $competition->id]);
 
         return [$competition, $event];
+    }
+
+    /**
+     * Attach a single age-bracket eligibility to the event.
+     */
+    private function attachAgeBracketEligibility(
+        Event $event,
+        string $bracketName,
+        int $sortOrder,
+        ?string $classificationId = null,
+    ): void {
+        $classificationId ??= Classification::factory()->create([
+            'competition_id' => $event->competition_id,
+        ])->id;
+
+        $bracket = AgeBracket::factory()->create([
+            'classification_id' => $classificationId,
+            'name' => $bracketName,
+            'sort_order' => $sortOrder,
+        ]);
+
+        $event->syncEligibilities([
+            [
+                'classification_id' => $classificationId,
+                'age_bracket_id' => $bracket->id,
+            ],
+        ]);
+        $event->load('eligibilities.ageBracket');
     }
 
     /**
