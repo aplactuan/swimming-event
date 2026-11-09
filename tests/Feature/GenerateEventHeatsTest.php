@@ -315,6 +315,48 @@ class GenerateEventHeatsTest extends TestCase
         $this->assertSame([3], $this->swimmersPerHeat($donor));
     }
 
+    public function test_generate_all_does_not_merge_novice_into_developmental_heats(): void
+    {
+        $competition = Competition::factory()->create(['number_of_lane' => 5]);
+        $novice = Classification::factory()->create([
+            'competition_id' => $competition->id,
+            'name' => 'Novice',
+            'sort_order' => 1,
+        ]);
+        $developmental = Classification::factory()->create([
+            'competition_id' => $competition->id,
+            'name' => 'Developmental',
+            'sort_order' => 2,
+        ]);
+
+        $developmentalHost = Event::factory()->create([
+            'competition_id' => $competition->id,
+            'name' => '25m Freestyle',
+            'gender' => 'male',
+            'sort_order' => 1,
+        ]);
+        $noviceDonor = Event::factory()->create([
+            'competition_id' => $competition->id,
+            'name' => '25m Freestyle',
+            'gender' => 'male',
+            'sort_order' => 2,
+        ]);
+
+        $this->attachAgeBracketEligibility($developmentalHost, '6 and under', 1, $developmental->id);
+        $this->attachAgeBracketEligibility($noviceDonor, '6 and under', 1, $novice->id);
+        $this->enterParticipants($developmentalHost, 2);
+        $this->enterParticipants($noviceDonor, 3);
+
+        app(GenerateEventHeats::class)->generateForCompetition($competition);
+
+        $this->assertSame([2], $this->swimmersPerHeat($developmentalHost));
+        $this->assertSame(
+            0,
+            $developmentalHost->heatLanes()->where('entry_event_id', $noviceDonor->id)->count(),
+        );
+        $this->assertSame([3], $this->swimmersPerHeat($noviceDonor));
+    }
+
     public function test_generate_all_does_not_borrow_from_incompatible_events(): void
     {
         $competition = Competition::factory()->create(['number_of_lane' => 5]);
@@ -650,19 +692,23 @@ class GenerateEventHeatsTest extends TestCase
      */
     private function enterParticipants(Event $event, int $count): array
     {
-        $classification = Classification::factory()->create([
-            'competition_id' => $event->competition_id,
-        ]);
+        $event->loadMissing('eligibilities');
+
+        $classificationId = $event->eligibilities->first()?->classification_id
+            ?? Classification::factory()->create([
+                'competition_id' => $event->competition_id,
+            ])->id;
 
         $participants = Participant::factory()
             ->count($count)
             ->paid()
             ->create([
                 'competition_id' => $event->competition_id,
-                'classification_id' => $classification->id,
+                'classification_id' => $classificationId,
             ]);
 
         $event->participants()->attach($participants->pluck('id')->all());
+        $event->unsetRelation('participants');
 
         return $participants->all();
     }

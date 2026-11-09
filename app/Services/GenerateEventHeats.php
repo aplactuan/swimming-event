@@ -15,10 +15,11 @@ class GenerateEventHeats
     /**
      * Rebuild the heats for every event in the competition.
      *
-     * Compatible individual events (same name and gender) pack full heats and
-     * fill leftover lanes with guests from later events whose age bracket is
-     * adjacent in the same classification. Guests keep scoring under their
-     * home event via entry_event_id.
+     * Compatible individual events (same name, gender, and classification)
+     * pack full heats and fill leftover lanes with guests from later events
+     * whose age bracket is adjacent. Classifications never mix — a Novice
+     * swimmer cannot be seated in a Developmental heat. Guests keep scoring
+     * under their home event via entry_event_id.
      *
      * @return array{events: int, heats: int} The number of events seeded and heats created.
      */
@@ -28,7 +29,12 @@ class GenerateEventHeats
 
         /** @var Collection<int, Event> $events */
         $events = $competition->events()
-            ->with(['participants', 'teams', 'eligibilities.ageBracket'])
+            ->with([
+                'participants.classification',
+                'teams',
+                'eligibilities.ageBracket',
+                'eligibilities.classification',
+            ])
             ->orderBy('sort_order')
             ->get();
 
@@ -44,7 +50,7 @@ class GenerateEventHeats
             );
 
             $groups = $individuals->groupBy(
-                fn (Event $event): string => $event->name.'|'.$event->gender->value,
+                fn (Event $event): string => $this->compatibilityGroupKey($event),
             );
 
             foreach ($groups as $group) {
@@ -203,7 +209,7 @@ class GenerateEventHeats
                     ) {
                         $donor = $events[$donorIndex];
 
-                        if (! $this->haveAdjacentAgeBrackets($event, $donor)) {
+                        if (! $this->canBorrowGuestsFrom($event, $donor)) {
                             continue;
                         }
 
@@ -213,8 +219,13 @@ class GenerateEventHeats
                             continue;
                         }
 
-                        $take = min($vacancies, count($available));
-                        $guests = array_splice($queues[$donor->id], 0, $take);
+                        $guests = $this->takeCompatibleGuests(
+                            $event,
+                            $donor,
+                            $available,
+                            $vacancies,
+                        );
+                        $queues[$donor->id] = $available;
 
                         foreach ($guests as $guestId) {
                             $tagged[] = [
@@ -223,7 +234,7 @@ class GenerateEventHeats
                             ];
                         }
 
-                        $vacancies -= $take;
+                        $vacancies -= count($guests);
                     }
                 }
 
@@ -244,6 +255,118 @@ class GenerateEventHeats
         }
 
         return ['events' => $seededEvents, 'heats' => $heats];
+    }
+
+    /**
+     * Group key so only same stroke, gender, and classification family combine.
+     */
+    private function compatibilityGroupKey(Event $event): string
+    {
+        $classificationKeys = $this->rootClassificationIds($event);
+
+        if ($classificationKeys === []) {
+            return $event->name.'|'.$event->gender->value.'|event:'.$event->id;
+        }
+
+        sort($classificationKeys);
+
+        return $event->name.'|'.$event->gender->value.'|'.implode(',', $classificationKeys);
+    }
+
+    /**
+     * Whether the donor event may lend swimmers into the host heat.
+     *
+     * Requires the same classification family and neighbouring age brackets
+     * (sort order differs by exactly one).
+     */
+    private function canBorrowGuestsFrom(Event $host, Event $donor): bool
+    {
+        $hostRoots = $this->rootClassificationIds($host);
+        $donorRoots = $this->rootClassificationIds($donor);
+
+        if ($hostRoots === [] || $donorRoots === []) {
+            return false;
+        }
+
+        if (array_intersect($hostRoots, $donorRoots) === []) {
+            return false;
+        }
+
+        return $this->haveAdjacentAgeBrackets($host, $donor);
+    }
+
+    /**
+     * Pull guest ids from the donor queue that belong to the host's classification family.
+     *
+     * @param  list<string>  $available  Modified in place; incompatible ids stay queued.
+     * @return list<string>
+     */
+    private function takeCompatibleGuests(
+        Event $host,
+        Event $donor,
+        array &$available,
+        int $limit,
+    ): array {
+        if ($limit <= 0 || $available === []) {
+            return [];
+        }
+
+        $hostRoots = $this->rootClassificationIds($host);
+        $participants = $donor->participants->keyBy(
+            fn ($participant): string => (string) $participant->id,
+        );
+        $guests = [];
+        $remaining = [];
+
+        foreach ($available as $participantId) {
+            if (count($guests) >= $limit) {
+                $remaining[] = $participantId;
+
+                continue;
+            }
+
+            $participant = $participants->get($participantId);
+            $participantRoot = $participant?->classification !== null
+                ? (string) ($participant->classification->parent_id ?? $participant->classification->id)
+                : null;
+
+            if ($participantRoot === null || ! in_array($participantRoot, $hostRoots, true)) {
+                $remaining[] = $participantId;
+
+                continue;
+            }
+
+            $guests[] = $participantId;
+        }
+
+        $available = $remaining;
+
+        return $guests;
+    }
+
+    /**
+     * Root classification ids from the event's eligibilities.
+     *
+     * @return list<string>
+     */
+    private function rootClassificationIds(Event $event): array
+    {
+        return $event->eligibilities
+            ->map(function ($eligibility): ?string {
+                $classification = $eligibility->classification;
+
+                if ($classification === null) {
+                    return $eligibility->classification_id !== null
+                        ? (string) $eligibility->classification_id
+                        : null;
+                }
+
+                return (string) ($classification->parent_id ?? $classification->id);
+            })
+            ->filter()
+            ->unique()
+            ->values()
+            ->all();
     }
 
     /**
