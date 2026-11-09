@@ -7,6 +7,7 @@ use App\Enums\HeatLaneStatus;
 use App\Models\Competition;
 use App\Models\Event;
 use App\Models\Heat;
+use Illuminate\Support\Collection;
 use Illuminate\Support\Facades\DB;
 
 class GenerateEventHeats
@@ -14,25 +15,70 @@ class GenerateEventHeats
     /**
      * Rebuild the heats for every event in the competition.
      *
+     * Compatible individual events (same name and gender) pack full heats and
+     * fill leftover lanes with guests from the next event in program order.
+     * Guests keep scoring under their home event via entry_event_id.
+     *
      * @return array{events: int, heats: int} The number of events seeded and heats created.
      */
     public function generateForCompetition(Competition $competition): array
     {
-        $events = 0;
-        $heats = 0;
+        $laneCount = $competition->number_of_lane;
 
-        foreach ($competition->events()->with(['participants', 'teams'])->get() as $event) {
-            $generatedCount = $this->generate($event, $competition->number_of_lane);
+        /** @var Collection<int, Event> $events */
+        $events = $competition->events()
+            ->with(['participants', 'teams'])
+            ->orderBy('sort_order')
+            ->get();
 
-            if ($generatedCount === 0) {
-                continue;
+        return DB::transaction(function () use ($events, $laneCount): array {
+            $seededEvents = 0;
+            $heats = 0;
+
+            $individuals = $events->filter(
+                fn (Event $event): bool => $event->type !== EventType::Relay,
+            );
+            $relays = $events->filter(
+                fn (Event $event): bool => $event->type === EventType::Relay,
+            );
+
+            $groups = $individuals->groupBy(
+                fn (Event $event): string => $event->name.'|'.$event->gender->value,
+            );
+
+            foreach ($groups as $group) {
+                /** @var Collection<int, Event> $group */
+                if ($group->count() === 1) {
+                    $generatedCount = $this->generate($group->first(), $laneCount);
+
+                    if ($generatedCount === 0) {
+                        continue;
+                    }
+
+                    $seededEvents++;
+                    $heats += $generatedCount;
+
+                    continue;
+                }
+
+                $summary = $this->generateCompatibleGroup($group->values()->all(), $laneCount);
+                $seededEvents += $summary['events'];
+                $heats += $summary['heats'];
             }
 
-            $events++;
-            $heats += $generatedCount;
-        }
+            foreach ($relays as $event) {
+                $generatedCount = $this->generate($event, $laneCount);
 
-        return ['events' => $events, 'heats' => $heats];
+                if ($generatedCount === 0) {
+                    continue;
+                }
+
+                $seededEvents++;
+                $heats += $generatedCount;
+            }
+
+            return ['events' => $seededEvents, 'heats' => $heats];
+        });
     }
 
     /**
@@ -66,11 +112,18 @@ class GenerateEventHeats
             $fillOrder = self::laneFillOrder($laneCount);
             $heatNumber = 0;
             $isRelay = $event->type === EventType::Relay;
+            $entries = array_map(
+                fn (string $id): array => [
+                    'id' => $id,
+                    'entry_event_id' => $event->id,
+                ],
+                $entryIds,
+            );
 
-            foreach ($this->spreadAcrossHeats($entryIds, $laneCount) as $heatEntryIds) {
+            foreach ($this->spreadAcrossHeats($entries, $laneCount) as $heatEntries) {
                 $heat = $event->heats()->create(['heat_number' => ++$heatNumber]);
 
-                $this->createLanes($heat, $laneCount, $fillOrder, $heatEntryIds, $isRelay);
+                $this->createLanes($heat, $laneCount, $fillOrder, $heatEntries, $isRelay);
             }
 
             return $heatNumber;
@@ -95,14 +148,124 @@ class GenerateEventHeats
     }
 
     /**
-     * Split entries into the fewest heats that fit, with sizes differing by at most one.
+     * Pack compatible individual events: full heats first, then fill the last
+     * heat's empty lanes with guests from later events in the group.
+     *
+     * @param  list<Event>  $events
+     * @return array{events: int, heats: int}
+     */
+    private function generateCompatibleGroup(array $events, int $laneCount): array
+    {
+        /** @var array<string, list<string>> $queues */
+        $queues = [];
+
+        foreach ($events as $event) {
+            $queues[$event->id] = $event->participants->pluck('id')->map(
+                fn (mixed $id): string => (string) $id,
+            )->all();
+        }
+
+        $fillOrder = self::laneFillOrder($laneCount);
+        $seededEvents = 0;
+        $heats = 0;
+
+        foreach ($events as $index => $event) {
+            $event->heats()->delete();
+
+            $homeIds = $queues[$event->id];
+
+            if ($homeIds === []) {
+                continue;
+            }
+
+            $heatChunks = $this->packIntoHeats($homeIds, $laneCount);
+            $lastIndex = count($heatChunks) - 1;
+            $vacancies = $laneCount - count($heatChunks[$lastIndex]);
+
+            /** @var list<array{id: string, entry_event_id: string}> $taggedHeats */
+            $taggedHeats = [];
+
+            foreach ($heatChunks as $chunkIndex => $chunkIds) {
+                $tagged = array_map(
+                    fn (string $id): array => [
+                        'id' => $id,
+                        'entry_event_id' => $event->id,
+                    ],
+                    $chunkIds,
+                );
+
+                if ($chunkIndex === $lastIndex && $vacancies > 0) {
+                    for (
+                        $donorIndex = $index + 1;
+                        $donorIndex < count($events) && $vacancies > 0;
+                        $donorIndex++
+                    ) {
+                        $donor = $events[$donorIndex];
+                        $available = $queues[$donor->id];
+
+                        if ($available === []) {
+                            continue;
+                        }
+
+                        $take = min($vacancies, count($available));
+                        $guests = array_splice($queues[$donor->id], 0, $take);
+
+                        foreach ($guests as $guestId) {
+                            $tagged[] = [
+                                'id' => $guestId,
+                                'entry_event_id' => $donor->id,
+                            ];
+                        }
+
+                        $vacancies -= $take;
+                    }
+                }
+
+                $taggedHeats[] = $tagged;
+            }
+
+            $queues[$event->id] = [];
+
+            $heatNumber = 0;
+
+            foreach ($taggedHeats as $heatEntries) {
+                $heat = $event->heats()->create(['heat_number' => ++$heatNumber]);
+                $this->createLanes($heat, $laneCount, $fillOrder, $heatEntries, false);
+            }
+
+            $seededEvents++;
+            $heats += $heatNumber;
+        }
+
+        return ['events' => $seededEvents, 'heats' => $heats];
+    }
+
+    /**
+     * Split entries into full heats with any remainder in the last heat.
      *
      * @param  list<string>  $entryIds
      * @return list<list<string>>
      */
-    private function spreadAcrossHeats(array $entryIds, int $laneCount): array
+    private function packIntoHeats(array $entryIds, int $laneCount): array
     {
-        $entryCount = count($entryIds);
+        $heats = [];
+
+        foreach (array_chunk($entryIds, $laneCount) as $chunk) {
+            $heats[] = $chunk;
+        }
+
+        return $heats;
+    }
+
+    /**
+     * Split entries into the fewest heats that fit, with sizes differing by at most one.
+     *
+     * @param  list<array{id: string, entry_event_id: string}>  $entries
+     * @return list<list<array{id: string, entry_event_id: string}>>
+     */
+    private function spreadAcrossHeats(array $entries, int $laneCount): array
+    {
+        $entryCount = count($entries);
         $heatCount = (int) ceil($entryCount / $laneCount);
         $baseSize = intdiv($entryCount, $heatCount);
         $heatsWithExtra = $entryCount % $heatCount;
@@ -112,7 +275,7 @@ class GenerateEventHeats
 
         for ($index = 0; $index < $heatCount; $index++) {
             $size = $baseSize + ($index < $heatsWithExtra ? 1 : 0);
-            $heats[] = array_slice($entryIds, $offset, $size);
+            $heats[] = array_slice($entries, $offset, $size);
             $offset += $size;
         }
 
@@ -123,27 +286,28 @@ class GenerateEventHeats
      * Create every lane for the heat, seating entries centre-out and leaving the rest empty.
      *
      * @param  list<int>  $fillOrder
-     * @param  list<string>  $entryIds
+     * @param  list<array{id: string, entry_event_id: string}>  $entries
      */
     private function createLanes(
         Heat $heat,
         int $laneCount,
         array $fillOrder,
-        array $entryIds,
+        array $entries,
         bool $isRelay,
     ): void {
         $entryByLane = array_combine(
-            array_slice($fillOrder, 0, count($entryIds)),
-            $entryIds,
+            array_slice($fillOrder, 0, count($entries)),
+            $entries,
         );
 
         foreach (range(1, $laneCount) as $laneNumber) {
-            $entryId = $entryByLane[$laneNumber] ?? null;
+            $entry = $entryByLane[$laneNumber] ?? null;
 
             $heat->lanes()->create([
                 'lane_number' => $laneNumber,
-                'participant_id' => $isRelay ? null : $entryId,
-                'team_id' => $isRelay ? $entryId : null,
+                'participant_id' => $isRelay || $entry === null ? null : $entry['id'],
+                'team_id' => $isRelay && $entry !== null ? $entry['id'] : null,
+                'entry_event_id' => $entry['entry_event_id'] ?? null,
                 'status' => HeatLaneStatus::Swam,
             ]);
         }

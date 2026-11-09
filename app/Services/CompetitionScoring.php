@@ -44,12 +44,23 @@ class CompetitionScoring
         $competition ??= $event->competition;
         $pointMap = $this->pointMap($competition);
 
-        $lanes = $event->heatLanes()
+        $lanes = HeatLane::query()
+            ->where(function ($query) use ($event): void {
+                $query->where('entry_event_id', $event->id)
+                    ->orWhere(function ($legacy) use ($event): void {
+                        $legacy->whereNull('entry_event_id')
+                            ->whereHas(
+                                'heat',
+                                fn ($heat) => $heat->where('event_id', $event->id),
+                            );
+                    });
+            })
             ->where(function ($query): void {
                 $query->whereNotNull('participant_id')->orWhereNotNull('team_id');
             })
             ->with([
                 'heat',
+                'entryEvent',
                 'participant.classification',
                 'participant.team',
                 'team',

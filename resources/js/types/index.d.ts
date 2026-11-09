@@ -92,16 +92,25 @@ export interface Participant {
     };
 }
 
+export interface HeatLaneEntryEvent {
+    id: string;
+    name: string;
+    gender: EventGender;
+    eligibilities: EventEligibility[];
+}
+
 export interface HeatLane {
     id: string;
     lane_number: number;
     participant_id: string | null;
     team_id: string | null;
+    entry_event_id: string | null;
     finish_time_hundredths: number | null;
     finish_time: string | null;
     status: HeatLaneStatus;
     participant?: Participant | null;
     team?: { id: string; name: string } | null;
+    entry_event?: HeatLaneEntryEvent | null;
     relay_swimmers?: RelaySwimmer[];
 }
 

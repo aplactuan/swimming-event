@@ -81,6 +81,8 @@ class EventController extends Controller
             'heats.lanes.participant.classification',
             'heats.lanes.participant.team',
             'heats.lanes.team',
+            'heats.lanes.entryEvent.eligibilities.classification',
+            'heats.lanes.entryEvent.eligibilities.ageBracket',
             'heats.lanes.relaySwimmers.participant',
         ]);
 

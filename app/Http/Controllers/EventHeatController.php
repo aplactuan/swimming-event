@@ -59,6 +59,7 @@ class EventHeatController extends Controller
             $to = HeatLane::query()->lockForUpdate()->findOrFail($validated['to_lane_id']);
 
             [$from->participant_id, $to->participant_id] = [$to->participant_id, $from->participant_id];
+            [$from->entry_event_id, $to->entry_event_id] = [$to->entry_event_id, $from->entry_event_id];
 
             $from->save();
             $to->save();

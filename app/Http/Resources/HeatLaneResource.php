@@ -23,6 +23,7 @@ class HeatLaneResource extends JsonResource
             'lane_number' => $this->lane_number,
             'participant_id' => $this->participant_id,
             'team_id' => $this->team_id,
+            'entry_event_id' => $this->entry_event_id,
             'finish_time_hundredths' => $this->finish_time_hundredths,
             'finish_time' => $this->finish_time,
             'status' => $this->status->value,
@@ -39,6 +40,19 @@ class HeatLaneResource extends JsonResource
                     : [
                         'id' => $this->team->id,
                         'name' => $this->team->name,
+                    ],
+            ),
+            'entry_event' => $this->whenLoaded(
+                'entryEvent',
+                fn () => $this->entryEvent === null
+                    ? null
+                    : [
+                        'id' => $this->entryEvent->id,
+                        'name' => $this->entryEvent->name,
+                        'gender' => $this->entryEvent->gender->value,
+                        'eligibilities' => $this->entryEvent->relationLoaded('eligibilities')
+                            ? EventEligibilityResource::collection($this->entryEvent->eligibilities)->resolve()
+                            : [],
                     ],
             ),
             'relay_swimmers' => $this->whenLoaded(

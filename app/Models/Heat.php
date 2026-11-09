@@ -73,7 +73,10 @@ class Heat extends Model
     {
         return $this->lanes()->updateOrCreate(
             ['lane_number' => $laneNumber],
-            ['participant_id' => $participant?->id],
+            [
+                'participant_id' => $participant?->id,
+                'entry_event_id' => $participant !== null ? $this->event_id : null,
+            ],
         );
     }
 
