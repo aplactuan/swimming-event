@@ -2,6 +2,7 @@
 
 namespace App\Http\Controllers;
 
+use App\Http\Requests\CopyAgeBracketRequest;
 use App\Http\Requests\ReorderAgeBracketsRequest;
 use App\Http\Requests\StoreAgeBracketRequest;
 use App\Http\Requests\UpdateAgeBracketRequest;
@@ -29,6 +30,43 @@ class AgeBracketController extends Controller
         return redirect()
             ->route('competitions.show', $competition)
             ->with('status', 'age-bracket-created');
+    }
+
+    /**
+     * Copy an age bracket onto one or more other classifications in the meet.
+     */
+    public function copy(
+        CopyAgeBracketRequest $request,
+        Competition $competition,
+        Classification $classification,
+        AgeBracket $ageBracket,
+    ): RedirectResponse {
+        /** @var list<string> $targetIds */
+        $targetIds = $request->validated('classification_ids');
+
+        DB::transaction(function () use ($ageBracket, $targetIds): void {
+            $targets = Classification::query()
+                ->whereKey($targetIds)
+                ->get()
+                ->keyBy('id');
+
+            foreach ($targetIds as $targetId) {
+                /** @var Classification $target */
+                $target = $targets[$targetId];
+
+                $target->ageBrackets()->create([
+                    'name' => $ageBracket->name,
+                    'start_birthday' => $ageBracket->start_birthday,
+                    'end_birthday' => $ageBracket->end_birthday,
+                    'sort_order' => AgeBracket::nextSortOrder($target->id),
+                ]);
+            }
+        });
+
+        return redirect()
+            ->route('competitions.show', $competition)
+            ->with('status', 'age-bracket-copied')
+            ->with('copied_age_bracket_count', count($targetIds));
     }
 
     /**

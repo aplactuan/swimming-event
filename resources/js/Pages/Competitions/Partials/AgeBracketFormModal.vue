@@ -11,11 +11,13 @@ import { computed, nextTick, ref } from 'vue';
 
 const props = defineProps<{
     competition: Competition;
+    classifications: Classification[];
 }>();
 
 const show = ref(false);
 const classification = ref<Classification | null>(null);
 const editingAgeBracket = ref<AgeBracket | null>(null);
+const copyFromKey = ref('');
 const nameInput = ref<{ focus: () => void } | null>(null);
 
 const form = useForm({
@@ -34,9 +36,68 @@ const submitLabel = computed(() =>
     isEditing.value ? 'Save changes' : 'Create age bracket',
 );
 
+type CopyOption = {
+    key: string;
+    label: string;
+    bracket: AgeBracket;
+};
+
+const copyFromOptions = computed((): CopyOption[] => {
+    if (isEditing.value || classification.value === null) {
+        return [];
+    }
+
+    const targetId = classification.value.id;
+    const options: CopyOption[] = [];
+
+    for (const root of props.classifications) {
+        if (root.id !== targetId) {
+            for (const bracket of root.age_brackets ?? []) {
+                options.push({
+                    key: `${root.id}:${bracket.id}`,
+                    label: `${root.name} · ${bracket.name}`,
+                    bracket,
+                });
+            }
+        }
+
+        for (const child of root.children ?? []) {
+            if (child.id === targetId || child.inherits_age_brackets) {
+                continue;
+            }
+
+            for (const bracket of child.age_brackets ?? []) {
+                options.push({
+                    key: `${child.id}:${bracket.id}`,
+                    label: `${root.name} / ${child.name} · ${bracket.name}`,
+                    bracket,
+                });
+            }
+        }
+    }
+
+    return options;
+});
+
+const applyCopyFrom = () => {
+    const selected = copyFromOptions.value.find(
+        (option) => option.key === copyFromKey.value,
+    );
+
+    if (! selected) {
+        return;
+    }
+
+    form.name = selected.bracket.name;
+    form.start_birthday = selected.bracket.start_birthday ?? '';
+    form.end_birthday = selected.bracket.end_birthday ?? '';
+    form.clearErrors();
+};
+
 const open = (selectedClassification: Classification, ageBracket?: AgeBracket) => {
     classification.value = selectedClassification;
     editingAgeBracket.value = ageBracket ?? null;
+    copyFromKey.value = '';
     form.name = ageBracket?.name ?? '';
     form.start_birthday = ageBracket?.start_birthday ?? '';
     form.end_birthday = ageBracket?.end_birthday ?? '';
@@ -50,6 +111,7 @@ const close = () => {
     show.value = false;
     classification.value = null;
     editingAgeBracket.value = null;
+    copyFromKey.value = '';
     form.clearErrors();
     form.reset();
 };
@@ -103,6 +165,29 @@ defineExpose({ open });
             </p>
 
             <div class="mt-6 grid gap-4">
+                <div v-if="! isEditing && copyFromOptions.length > 0">
+                    <InputLabel for="age_bracket_copy_from" value="Copy from" />
+                    <select
+                        id="age_bracket_copy_from"
+                        v-model="copyFromKey"
+                        class="sm-input mt-1 block w-full"
+                        @change="applyCopyFrom"
+                    >
+                        <option value="">Start from scratch</option>
+                        <option
+                            v-for="option in copyFromOptions"
+                            :key="option.key"
+                            :value="option.key"
+                        >
+                            {{ option.label }}
+                        </option>
+                    </select>
+                    <p class="mt-1 text-xs text-ink-muted">
+                        Prefill this form from an age bracket on another classification.
+                        You can still edit the values before saving.
+                    </p>
+                </div>
+
                 <div>
                     <InputLabel for="age_bracket_name" value="Name" />
                     <TextInput
