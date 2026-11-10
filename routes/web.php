@@ -73,6 +73,9 @@ Route::middleware(['auth', 'verified'])->group(function () {
             ->name('age-brackets.reorder');
         Route::put('/competitions/{competition}/classifications/{classification}/age-brackets/{age_bracket}', [AgeBracketController::class, 'update'])
             ->name('age-brackets.update');
+        Route::post('/competitions/{competition}/classifications/{classification}/age-brackets/{age_bracket}/copy', [AgeBracketController::class, 'copy'])
+            ->middleware('competition.open')
+            ->name('age-brackets.copy');
         Route::delete('/competitions/{competition}/classifications/{classification}/age-brackets/{age_bracket}', [AgeBracketController::class, 'destroy'])
             ->name('age-brackets.destroy');
 

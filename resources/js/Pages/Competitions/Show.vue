@@ -3,6 +3,7 @@ import AuthenticatedLayout from '@/Layouts/AuthenticatedLayout.vue';
 import AgeBracketFormModal from '@/Pages/Competitions/Partials/AgeBracketFormModal.vue';
 import ClassificationFormModal from '@/Pages/Competitions/Partials/ClassificationFormModal.vue';
 import CloseCompetitionModal from '@/Pages/Competitions/Partials/CloseCompetitionModal.vue';
+import CopyAgeBracketModal from '@/Pages/Competitions/Partials/CopyAgeBracketModal.vue';
 import DeleteAgeBracketModal from '@/Pages/Competitions/Partials/DeleteAgeBracketModal.vue';
 import DeleteClassificationModal from '@/Pages/Competitions/Partials/DeleteClassificationModal.vue';
 import DeleteEventModal from '@/Pages/Competitions/Partials/DeleteEventModal.vue';
@@ -68,6 +69,9 @@ const deleteClassificationModal = ref<{ open: (classification: Classification) =
 );
 const ageBracketFormModal = ref<{
     open: (classification: Classification, ageBracket?: AgeBracket) => void;
+} | null>(null);
+const copyAgeBracketModal = ref<{
+    open: (classification: Classification, ageBracket: AgeBracket) => void;
 } | null>(null);
 const deleteAgeBracketModal = ref<{
     open: (classification: Classification, ageBracket: AgeBracket) => void;
@@ -1316,6 +1320,14 @@ const formatParticipantName = (participant: Participant) =>
                                                 Edit
                                             </button>
                                             <button
+                                                v-if="! isCompetitionClosed"
+                                                type="button"
+                                                class="text-sm font-semibold text-ink-muted hover:text-ink"
+                                                @click="copyAgeBracketModal?.open(classification, bracket)"
+                                            >
+                                                Copy
+                                            </button>
+                                            <button
                                                 type="button"
                                                 class="text-sm font-semibold text-red-700 hover:text-red-800"
                                                 @click="deleteAgeBracketModal?.open(classification, bracket)"
@@ -1412,6 +1424,14 @@ const formatParticipantName = (participant: Participant) =>
                                                             Edit
                                                         </button>
                                                         <button
+                                                            v-if="! isCompetitionClosed"
+                                                            type="button"
+                                                            class="text-sm font-semibold text-ink-muted hover:text-ink"
+                                                            @click="copyAgeBracketModal?.open(child, bracket)"
+                                                        >
+                                                            Copy
+                                                        </button>
+                                                        <button
                                                             type="button"
                                                             class="text-sm font-semibold text-red-700 hover:text-red-800"
                                                             @click="deleteAgeBracketModal?.open(child, bracket)"
@@ -1473,6 +1493,12 @@ const formatParticipantName = (participant: Participant) =>
         <AgeBracketFormModal
             ref="ageBracketFormModal"
             :competition="competition"
+            :classifications="rootClassifications"
+        />
+        <CopyAgeBracketModal
+            ref="copyAgeBracketModal"
+            :competition="competition"
+            :classifications="rootClassifications"
         />
         <DeleteAgeBracketModal
             ref="deleteAgeBracketModal"
