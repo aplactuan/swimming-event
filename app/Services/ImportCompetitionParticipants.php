@@ -124,18 +124,23 @@ class ImportCompetitionParticipants
      */
     private function importRows(Competition $competition, $handle, array $columnIndexes): array
     {
-        $existingNames = $competition->participants()
-            ->get(['first_name', 'last_name'])
-            ->mapWithKeys(fn ($participant): array => [
-                $this->nameKey($participant->first_name, $participant->last_name) => true,
-            ])
-            ->all();
-
         /** @var array<string, Classification> $classificationsByName */
         $classificationsByName = $competition->classifications()
             ->get()
             ->mapWithKeys(fn (Classification $classification): array => [
                 Str::lower(Str::squish($classification->name)) => $classification,
+            ])
+            ->all();
+
+        $existingKeys = $competition->participants()
+            ->with('classification:id,name')
+            ->get(['first_name', 'last_name', 'classification_id'])
+            ->mapWithKeys(fn ($participant): array => [
+                $this->participantKey(
+                    $participant->first_name,
+                    $participant->last_name,
+                    $participant->classification?->name ?? '',
+                ) => true,
             ])
             ->all();
 
@@ -182,9 +187,9 @@ class ImportCompetitionParticipants
                 continue;
             }
 
-            $nameKey = $this->nameKey($firstName, $lastName);
+            $participantKey = $this->participantKey($firstName, $lastName, $classificationName);
 
-            if (isset($existingNames[$nameKey])) {
+            if (isset($existingKeys[$participantKey])) {
                 $skippedDuplicates++;
 
                 continue;
@@ -218,7 +223,7 @@ class ImportCompetitionParticipants
                 'paid' => false,
             ]);
 
-            $existingNames[$nameKey] = true;
+            $existingKeys[$participantKey] = true;
             $imported++;
         }
 
@@ -256,9 +261,11 @@ class ImportCompetitionParticipants
             ->toString();
     }
 
-    private function nameKey(string $firstName, string $lastName): string
+    private function participantKey(string $firstName, string $lastName, string $classificationName): string
     {
-        return Str::lower(Str::squish($firstName)).'|'.Str::lower(Str::squish($lastName));
+        return Str::lower(Str::squish($firstName))
+            .'|'.Str::lower(Str::squish($lastName))
+            .'|'.Str::lower(Str::squish($classificationName));
     }
 
     private function parseGender(string $value): ?ParticipantGender

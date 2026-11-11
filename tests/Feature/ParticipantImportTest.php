@@ -81,14 +81,14 @@ class ParticipantImportTest extends TestCase
         $this->assertDatabaseCount('event_participant', 0);
     }
 
-    public function test_import_skips_existing_names_on_the_same_competition(): void
+    public function test_import_skips_existing_name_and_classification_on_the_same_competition(): void
     {
         $user = User::factory()->create();
         $competition = Competition::factory()->create();
         $otherCompetition = Competition::factory()->create();
         $classification = Classification::factory()->create([
             'competition_id' => $competition->id,
-            'name' => 'Novice',
+            'name' => 'Developmental',
         ]);
 
         Participant::factory()->create([
@@ -130,6 +130,47 @@ class ParticipantImportTest extends TestCase
         $this->assertSame(
             1,
             $competition->participants()->where('first_name', 'Princess Elijah')->count(),
+        );
+    }
+
+    public function test_import_allows_same_name_in_a_different_classification(): void
+    {
+        $user = User::factory()->create();
+        $competition = Competition::factory()->create();
+        $novice = Classification::factory()->create([
+            'competition_id' => $competition->id,
+            'name' => 'Novice',
+        ]);
+
+        Participant::factory()->create([
+            'competition_id' => $competition->id,
+            'classification_id' => $novice->id,
+            'first_name' => 'Elias Matteo',
+            'last_name' => 'Aban',
+            'team_id' => \App\Models\Team::factory()->create([
+                'competition_id' => $competition->id,
+                'name' => 'Existing Team',
+            ]),
+        ]);
+
+        $this
+            ->actingAs($user)
+            ->post(route('participants.import', $competition), [
+                'file' => $this->csvFile($this->validCsv()),
+            ])
+            ->assertRedirect(route('competitions.show', $competition))
+            ->assertSessionHas('import_summary.imported', 2)
+            ->assertSessionHas('import_summary.skipped_duplicates', 0);
+
+        $this->assertSame(
+            2,
+            $competition->participants()->where('last_name', 'Aban')->count(),
+        );
+        $this->assertTrue(
+            $competition->participants()
+                ->where('last_name', 'Aban')
+                ->whereHas('classification', fn ($query) => $query->where('name', 'Developmental'))
+                ->exists(),
         );
     }
 
@@ -224,7 +265,34 @@ class ParticipantImportTest extends TestCase
         $this->assertTrue($competition->participants()->where('last_name', 'Aban')->exists());
     }
 
-    public function test_import_skips_duplicate_names_within_the_same_file(): void
+    public function test_import_skips_duplicate_name_and_classification_within_the_same_file(): void
+    {
+        $user = User::factory()->create();
+        $competition = Competition::factory()->create();
+
+        $csv = implode("\n", [
+            'No.,Name,Team,Gen,Age,First Name,Last Name,Birthday,Classification',
+            '1,"Aban, Elias Matteo",Leganes Aqua Phoenix,M,6,Elias Matteo,Aban,08/19/2020,Developmental',
+            '2,"Aban, Elias Matteo",Other Team,M,6,Elias Matteo,Aban,08/19/2020,Developmental',
+            '',
+        ]);
+
+        $this
+            ->actingAs($user)
+            ->post(route('participants.import', $competition), [
+                'file' => $this->csvFile($csv),
+            ])
+            ->assertSessionHas('import_summary.imported', 1)
+            ->assertSessionHas('import_summary.skipped_duplicates', 1);
+
+        $this->assertSame(1, $competition->participants()->count());
+        $this->assertSame(
+            'Leganes Aqua Phoenix',
+            $competition->participants()->first()->team->name,
+        );
+    }
+
+    public function test_import_allows_same_name_with_different_classifications_in_the_same_file(): void
     {
         $user = User::factory()->create();
         $competition = Competition::factory()->create();
@@ -241,13 +309,18 @@ class ParticipantImportTest extends TestCase
             ->post(route('participants.import', $competition), [
                 'file' => $this->csvFile($csv),
             ])
-            ->assertSessionHas('import_summary.imported', 1)
-            ->assertSessionHas('import_summary.skipped_duplicates', 1);
+            ->assertSessionHas('import_summary.imported', 2)
+            ->assertSessionHas('import_summary.skipped_duplicates', 0);
 
-        $this->assertSame(1, $competition->participants()->count());
+        $this->assertSame(2, $competition->participants()->count());
         $this->assertSame(
-            'Leganes Aqua Phoenix',
-            $competition->participants()->first()->team->name,
+            ['Developmental', 'Novice'],
+            $competition->participants()
+                ->with('classification')
+                ->orderBy('created_at')
+                ->get()
+                ->pluck('classification.name')
+                ->all(),
         );
     }
 
