@@ -36,6 +36,7 @@ const form = useForm<{
     birthdate: string;
     classification_id: string;
     paid: boolean;
+    seed_time: string;
 }>({
     first_name: '',
     last_name: '',
@@ -44,6 +45,7 @@ const form = useForm<{
     birthdate: '',
     classification_id: '',
     paid: false,
+    seed_time: '',
 });
 
 const isEditing = computed(() => editingParticipant.value !== null);
@@ -77,6 +79,7 @@ const open = (participant?: Participant) => {
     form.birthdate = participant?.birthdate ?? '';
     form.classification_id = participant?.classification_id ?? '';
     form.paid = participant?.paid ?? false;
+    form.seed_time = participant?.seed_time ?? '';
     form.clearErrors();
     show.value = true;
 
@@ -231,8 +234,21 @@ defineExpose({ open });
                     />
                 </div>
 
-                <div class="sm:col-span-2">
-                    <label class="flex items-center gap-3">
+                <div>
+                    <InputLabel for="participant_seed_time" value="Seed time" />
+                    <TextInput
+                        id="participant_seed_time"
+                        v-model="form.seed_time"
+                        type="text"
+                        class="mt-1 block w-full"
+                        placeholder="e.g. 38.20 or 1:02.45"
+                        autocomplete="off"
+                    />
+                    <InputError class="mt-2" :message="form.errors.seed_time" />
+                </div>
+
+                <div class="flex items-end">
+                    <label class="flex items-center gap-3 pb-2">
                         <input
                             v-model="form.paid"
                             type="checkbox"
