@@ -5,6 +5,7 @@ use App\Http\Controllers\ClassificationController;
 use App\Http\Controllers\CompetitionController;
 use App\Http\Controllers\CompetitionHeatController;
 use App\Http\Controllers\CompetitionPointRuleController;
+use App\Http\Controllers\CompetitionLaneCardsController;
 use App\Http\Controllers\CompetitionProgramController;
 use App\Http\Controllers\CompetitionResultController;
 use App\Http\Controllers\CompetitionStandingController;
@@ -49,6 +50,8 @@ Route::middleware(['auth', 'verified'])->group(function () {
         ->name('competition-results.pdf');
     Route::get('/competitions/{competition}/program-pdf', [CompetitionProgramController::class, 'pdf'])
         ->name('competition-program.pdf');
+    Route::get('/competitions/{competition}/lane-cards-pdf', [CompetitionLaneCardsController::class, 'pdf'])
+        ->name('competition-lane-cards.pdf');
     Route::get('/competitions/{competition}/results/{event}', [CompetitionResultController::class, 'show'])
         ->name('competition-results.show');
     Route::get('/competitions/{competition}/standings', [CompetitionStandingController::class, 'index'])

@@ -89,6 +89,7 @@ const deleteTeamModal = ref<{ open: (team: Team) => void } | null>(null);
 const pointRulesModal = ref<{ open: (rules: CompetitionPointRule[]) => void } | null>(null);
 const resultsPdfClassificationId = ref('');
 const programPdfClassificationId = ref('');
+const laneCardsPdfClassificationId = ref('');
 
 const resultsPdfHref = computed(() => {
     const params: Record<string, string> = {
@@ -112,6 +113,18 @@ const programPdfHref = computed(() => {
     }
 
     return route('competition-program.pdf', params);
+});
+
+const laneCardsPdfHref = computed(() => {
+    const params: Record<string, string> = {
+        competition: props.competition.id,
+    };
+
+    if (laneCardsPdfClassificationId.value !== '') {
+        params.classification_id = laneCardsPdfClassificationId.value;
+    }
+
+    return route('competition-lane-cards.pdf', params);
 });
 
 /**
@@ -995,6 +1008,32 @@ const formatParticipantName = (participant: Participant) =>
                                     class="sm-btn-secondary justify-center sm:shrink-0"
                                 >
                                     Download results
+                                </a>
+                            </div>
+
+                            <div class="flex flex-col gap-2 sm:flex-row sm:items-end">
+                                <div class="min-w-0 flex-1">
+                                    <label class="sm-label" for="lane-cards-pdf-scope">Lane cards PDF</label>
+                                    <select
+                                        id="lane-cards-pdf-scope"
+                                        v-model="laneCardsPdfClassificationId"
+                                        class="sm-input mt-1 block w-full"
+                                    >
+                                        <option value="">All events</option>
+                                        <option
+                                            v-for="classification in rootClassifications"
+                                            :key="classification.id"
+                                            :value="classification.id"
+                                        >
+                                            {{ classification.name }}
+                                        </option>
+                                    </select>
+                                </div>
+                                <a
+                                    :href="laneCardsPdfHref"
+                                    class="sm-btn-secondary justify-center sm:shrink-0"
+                                >
+                                    Download lane cards
                                 </a>
                             </div>
                         </div>
