@@ -86,6 +86,8 @@ export interface Participant {
     age: number;
     classification_id: string;
     paid: boolean;
+    seed_time_hundredths: number | null;
+    seed_time: string | null;
     classification?: {
         id: string;
         name: string;

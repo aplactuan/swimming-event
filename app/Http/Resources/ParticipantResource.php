@@ -32,6 +32,8 @@ class ParticipantResource extends JsonResource
             'age' => $this->age,
             'classification_id' => $this->classification_id,
             'paid' => $this->paid,
+            'seed_time_hundredths' => $this->seed_time_hundredths,
+            'seed_time' => $this->seed_time,
             'classification' => $this->whenLoaded(
                 'classification',
                 fn () => [

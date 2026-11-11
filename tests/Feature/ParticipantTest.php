@@ -63,7 +63,49 @@ class ParticipantTest extends TestCase
         $this->assertSame('2015-06-15', $participant->birthdate->toDateString());
         $this->assertSame($classification->id, $participant->classification_id);
         $this->assertFalse($participant->paid);
+        $this->assertNull($participant->seed_time_hundredths);
         $this->assertDatabaseCount('event_participant', 0);
+    }
+
+    public function test_authenticated_users_can_create_a_participant_with_a_seed_time(): void
+    {
+        $user = User::factory()->create();
+        $competition = Competition::factory()->create();
+        $classification = Classification::factory()->create([
+            'competition_id' => $competition->id,
+        ]);
+
+        $this
+            ->actingAs($user)
+            ->post(route('participants.store', $competition), $this->validPayload($classification, [
+                'seed_time' => '1:02.45',
+            ]))
+            ->assertRedirect(route('competitions.show', $competition));
+
+        $participant = Participant::query()->firstOrFail();
+
+        $this->assertSame(6245, $participant->seed_time_hundredths);
+        $this->assertSame('1:02.45', $participant->seed_time);
+    }
+
+    public function test_seed_time_must_use_a_valid_format(): void
+    {
+        $user = User::factory()->create();
+        $competition = Competition::factory()->create();
+        $classification = Classification::factory()->create([
+            'competition_id' => $competition->id,
+        ]);
+
+        $this
+            ->actingAs($user)
+            ->from(route('competitions.show', $competition))
+            ->post(route('participants.store', $competition), $this->validPayload($classification, [
+                'seed_time' => 'not-a-time',
+            ]))
+            ->assertRedirect(route('competitions.show', $competition))
+            ->assertSessionHasErrors('seed_time');
+
+        $this->assertDatabaseCount('participants', 0);
     }
 
     public function test_creating_a_paid_participant_auto_enters_matching_events(): void

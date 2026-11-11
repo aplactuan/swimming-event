@@ -94,6 +94,96 @@ class GenerateEventHeatsTest extends TestCase
         $this->assertSame([3], $occupied->pluck('lane_number')->all());
     }
 
+    public function test_faster_seed_times_take_centre_lanes(): void
+    {
+        [, $event] = $this->competitionWithEvent(lanes: 5);
+        $classificationId = Classification::factory()->create([
+            'competition_id' => $event->competition_id,
+        ])->id;
+
+        $slow = Participant::factory()->paid()->create([
+            'competition_id' => $event->competition_id,
+            'classification_id' => $classificationId,
+            'seed_time_hundredths' => 4500,
+        ]);
+        $fast = Participant::factory()->paid()->create([
+            'competition_id' => $event->competition_id,
+            'classification_id' => $classificationId,
+            'seed_time_hundredths' => 2800,
+        ]);
+        $mid = Participant::factory()->paid()->create([
+            'competition_id' => $event->competition_id,
+            'classification_id' => $classificationId,
+            'seed_time_hundredths' => 3200,
+        ]);
+        $noTime = Participant::factory()->paid()->create([
+            'competition_id' => $event->competition_id,
+            'classification_id' => $classificationId,
+            'seed_time_hundredths' => null,
+        ]);
+
+        $event->participants()->attach([$slow->id, $fast->id, $mid->id, $noTime->id]);
+
+        app(GenerateEventHeats::class)->generate($event);
+
+        $lanes = $event->heats()->sole()->lanes->keyBy('lane_number');
+
+        $this->assertSame($fast->id, $lanes->get(3)->participant_id);
+        $this->assertSame($mid->id, $lanes->get(4)->participant_id);
+        $this->assertSame($slow->id, $lanes->get(2)->participant_id);
+        $this->assertSame($noTime->id, $lanes->get(5)->participant_id);
+        $this->assertNull($lanes->get(1)->participant_id);
+    }
+
+    public function test_slower_seed_times_are_placed_in_earlier_heats(): void
+    {
+        [, $event] = $this->competitionWithEvent(lanes: 5);
+        $classificationId = Classification::factory()->create([
+            'competition_id' => $event->competition_id,
+        ])->id;
+
+        $participants = collect([
+            5000,
+            4800,
+            4600,
+            3000,
+            2800,
+            2600,
+        ])->map(fn (int $hundredths): Participant => Participant::factory()->paid()->create([
+            'competition_id' => $event->competition_id,
+            'classification_id' => $classificationId,
+            'seed_time_hundredths' => $hundredths,
+        ]));
+
+        $event->participants()->attach($participants->pluck('id')->all());
+
+        app(GenerateEventHeats::class)->generate($event);
+
+        $heats = $event->heats()->with('lanes.participant')->orderBy('heat_number')->get();
+
+        $this->assertCount(2, $heats);
+
+        $firstHeatTimes = $heats[0]->lanes
+            ->whereNotNull('participant_id')
+            ->pluck('participant.seed_time_hundredths')
+            ->sortDesc()
+            ->values()
+            ->all();
+        $secondHeatTimes = $heats[1]->lanes
+            ->whereNotNull('participant_id')
+            ->pluck('participant.seed_time_hundredths')
+            ->sort()
+            ->values()
+            ->all();
+
+        $this->assertSame([5000, 4800, 4600], $firstHeatTimes);
+        $this->assertSame([2600, 2800, 3000], $secondHeatTimes);
+        $this->assertSame(
+            2600,
+            $heats[1]->lanes->firstWhere('lane_number', 3)->participant->seed_time_hundredths,
+        );
+    }
+
     public function test_lane_fill_order_runs_centre_out_for_odd_and_even_lane_counts(): void
     {
         $this->assertSame([3, 4, 2, 5, 1], GenerateEventHeats::laneFillOrder(5));

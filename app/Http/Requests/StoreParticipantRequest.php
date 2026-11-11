@@ -44,6 +44,23 @@ class StoreParticipantRequest extends FormRequest
                 Rule::exists('classifications', 'id')->where('competition_id', $competition->id),
             ],
             'paid' => ['sometimes', 'boolean'],
+            'seed_time' => [
+                'nullable',
+                'string',
+                'regex:/^(?:\d{1,2}:[0-5]\d|\d{1,3})(?:\.\d{1,2})?$/',
+            ],
+        ];
+    }
+
+    /**
+     * Get the error messages for the defined validation rules.
+     *
+     * @return array<string, string>
+     */
+    public function messages(): array
+    {
+        return [
+            'seed_time.regex' => 'Enter the seed time as m:ss.hh, for example 1:02.45 or 38.20.',
         ];
     }
 
@@ -55,6 +72,12 @@ class StoreParticipantRequest extends FormRequest
         if ($this->has('paid')) {
             $this->merge([
                 'paid' => filter_var($this->input('paid'), FILTER_VALIDATE_BOOLEAN, FILTER_NULL_ON_FAILURE) ?? false,
+            ]);
+        }
+
+        if ($this->exists('seed_time')) {
+            $this->merge([
+                'seed_time' => trim((string) $this->input('seed_time')) ?: null,
             ]);
         }
     }

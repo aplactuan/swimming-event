@@ -737,6 +737,7 @@ const formatParticipantName = (participant: Participant) =>
                                             · {{ formatShortDate(participant.birthdate) }}
                                             · {{ participant.age }} yrs
                                             · {{ participant.classification?.name ?? 'Unknown class' }}
+                                            · Seed {{ participant.seed_time ?? 'NT' }}
                                             · {{ participant.paid ? 'Paid' : 'Unpaid' }}
                                         </p>
                                     </div>
