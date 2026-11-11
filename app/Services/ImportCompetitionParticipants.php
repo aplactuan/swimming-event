@@ -5,6 +5,7 @@ namespace App\Services;
 use App\Enums\ParticipantGender;
 use App\Models\Classification;
 use App\Models\Competition;
+use App\Models\HeatLane;
 use App\Models\Team;
 use Carbon\Carbon;
 use Carbon\Exceptions\InvalidFormatException;
@@ -31,6 +32,9 @@ class ImportCompetitionParticipants
         'birthday' => 'birthdate',
         'birthdate' => 'birthdate',
         'classification' => 'classification',
+        'seed time' => 'seed_time',
+        'seedtime' => 'seed_time',
+        'seed' => 'seed_time',
     ];
 
     /**
@@ -169,6 +173,12 @@ class ImportCompetitionParticipants
             $gender = $this->parseGender((string) ($row[$columnIndexes['gender']] ?? ''));
             $birthdate = $this->parseBirthdate((string) ($row[$columnIndexes['birthdate']] ?? ''));
             $classificationName = Str::squish((string) ($row[$columnIndexes['classification']] ?? ''));
+            $seedTimeRaw = array_key_exists('seed_time', $columnIndexes)
+                ? trim((string) ($row[$columnIndexes['seed_time']] ?? ''))
+                : '';
+            $seedTimeHundredths = $seedTimeRaw === ''
+                ? null
+                : HeatLane::parseFinishTime($seedTimeRaw);
 
             if (
                 $firstName === ''
@@ -177,6 +187,7 @@ class ImportCompetitionParticipants
                 || $gender === null
                 || $birthdate === null
                 || $classificationName === ''
+                || ($seedTimeRaw !== '' && $seedTimeHundredths === null)
                 || Str::length($firstName) > 255
                 || Str::length($lastName) > 255
                 || Str::length($teamName) > 255
@@ -221,6 +232,7 @@ class ImportCompetitionParticipants
                 'birthdate' => $birthdate,
                 'classification_id' => $classificationsByName[$classificationKey]->id,
                 'paid' => false,
+                'seed_time_hundredths' => $seedTimeHundredths,
             ]);
 
             $existingKeys[$participantKey] = true;

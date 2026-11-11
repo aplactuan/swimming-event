@@ -265,6 +265,34 @@ class ParticipantImportTest extends TestCase
         $this->assertTrue($competition->participants()->where('last_name', 'Aban')->exists());
     }
 
+    public function test_import_stores_optional_seed_times(): void
+    {
+        $user = User::factory()->create();
+        $competition = Competition::factory()->create();
+
+        $csv = implode("\n", [
+            'First Name,Last Name,Team,Gen,Birthday,Classification,Seed Time',
+            'Elias Matteo,Aban,Leganes Aqua Phoenix,M,08/19/2020,Developmental,38.20',
+            'Princess Elijah,Abdon,Sta Barbara Sailfish Swim Team,F,02/14/2014,Novice,',
+            '',
+        ]);
+
+        $this
+            ->actingAs($user)
+            ->post(route('participants.import', $competition), [
+                'file' => $this->csvFile($csv),
+            ])
+            ->assertSessionHas('import_summary.imported', 2);
+
+        $this->assertSame(
+            3820,
+            $competition->participants()->where('last_name', 'Aban')->value('seed_time_hundredths'),
+        );
+        $this->assertNull(
+            $competition->participants()->where('last_name', 'Abdon')->value('seed_time_hundredths'),
+        );
+    }
+
     public function test_import_skips_duplicate_name_and_classification_within_the_same_file(): void
     {
         $user = User::factory()->create();

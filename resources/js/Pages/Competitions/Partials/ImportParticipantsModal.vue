@@ -72,7 +72,7 @@ defineExpose({ open });
             </h2>
             <p class="mt-1 text-sm text-ink-muted">
                 Upload a CSV (max 2 MB) with First Name, Last Name, Team, Gen, Birthday, and Classification.
-                Missing classifications are created. Matching first name, last name, and classification are skipped.
+                Seed Time is optional. Missing classifications are created. Matching first name, last name, and classification are skipped.
             </p>
 
             <div class="mt-6">

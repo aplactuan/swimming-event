@@ -6,6 +6,7 @@ use App\Http\Requests\ImportParticipantsRequest;
 use App\Http\Requests\StoreParticipantRequest;
 use App\Http\Requests\UpdateParticipantRequest;
 use App\Models\Competition;
+use App\Models\HeatLane;
 use App\Models\Participant;
 use App\Services\ImportCompetitionParticipants;
 use App\Services\ParticipantEventSync;
@@ -22,7 +23,7 @@ class ParticipantController extends Controller
         Competition $competition,
         ParticipantEventSync $sync,
     ): RedirectResponse {
-        $participant = $competition->participants()->create($request->validated());
+        $participant = $competition->participants()->create($this->participantAttributes($request));
 
         if ($participant->paid) {
             $sync->syncForPaid($participant);
@@ -63,7 +64,7 @@ class ParticipantController extends Controller
     ): RedirectResponse {
         $wasPaid = $participant->paid;
 
-        $participant->update($request->validated());
+        $participant->update($this->participantAttributes($request));
 
         if ($participant->paid && ! $wasPaid) {
             $sync->syncForPaid($participant);
@@ -88,5 +89,16 @@ class ParticipantController extends Controller
         return redirect()
             ->route('competitions.show', $competition)
             ->with('status', 'participant-deleted');
+    }
+
+    /**
+     * @return array<string, mixed>
+     */
+    private function participantAttributes(StoreParticipantRequest $request): array
+    {
+        $attributes = $request->safe()->except('seed_time');
+        $attributes['seed_time_hundredths'] = HeatLane::parseFinishTime($request->input('seed_time'));
+
+        return $attributes;
     }
 }

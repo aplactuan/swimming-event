@@ -7,6 +7,7 @@ use App\Enums\HeatLaneStatus;
 use App\Models\Competition;
 use App\Models\Event;
 use App\Models\Heat;
+use App\Models\Participant;
 use Illuminate\Support\Collection;
 use Illuminate\Support\Facades\DB;
 
@@ -105,11 +106,22 @@ class GenerateEventHeats
     {
         $laneCount ??= $event->competition()->value('number_of_lane');
 
-        $entryIds = $event->type === EventType::Relay
-            ? $event->teams()->pluck('teams.id')->all()
-            : $event->participants()->pluck('participants.id')->all();
+        $isRelay = $event->type === EventType::Relay;
 
-        return DB::transaction(function () use ($event, $laneCount, $entryIds): int {
+        if ($isRelay) {
+            $entryIds = $event->teams()->pluck('teams.id')->all();
+            $participantsById = collect();
+        } else {
+            $participants = $this->sortParticipantsForSeeding(
+                $event->participants()->get(['participants.id', 'participants.seed_time_hundredths']),
+            );
+            $entryIds = $participants->pluck('id')->map(fn (mixed $id): string => (string) $id)->all();
+            $participantsById = $participants->keyBy(
+                fn (Participant $participant): string => (string) $participant->id,
+            );
+        }
+
+        return DB::transaction(function () use ($event, $laneCount, $entryIds, $isRelay, $participantsById): int {
             $event->heats()->delete();
 
             if ($entryIds === []) {
@@ -118,7 +130,6 @@ class GenerateEventHeats
 
             $fillOrder = self::laneFillOrder($laneCount);
             $heatNumber = 0;
-            $isRelay = $event->type === EventType::Relay;
             $entries = array_map(
                 fn (string $id): array => [
                     'id' => $id,
@@ -130,7 +141,13 @@ class GenerateEventHeats
             foreach ($this->spreadAcrossHeats($entries, $laneCount) as $heatEntries) {
                 $heat = $event->heats()->create(['heat_number' => ++$heatNumber]);
 
-                $this->createLanes($heat, $laneCount, $fillOrder, $heatEntries, $isRelay);
+                $this->createLanes(
+                    $heat,
+                    $laneCount,
+                    $fillOrder,
+                    $this->orderEntriesForLaneFill($heatEntries, $participantsById),
+                    $isRelay,
+                );
             }
 
             return $heatNumber;
@@ -165,11 +182,17 @@ class GenerateEventHeats
     {
         /** @var array<string, list<string>> $queues */
         $queues = [];
+        /** @var Collection<string, Participant> $participantsById */
+        $participantsById = collect();
 
         foreach ($events as $event) {
-            $queues[$event->id] = $event->participants->pluck('id')->map(
+            $sorted = $this->sortParticipantsForSeeding($event->participants);
+            $queues[$event->id] = $sorted->pluck('id')->map(
                 fn (mixed $id): string => (string) $id,
             )->all();
+            $participantsById = $participantsById->union(
+                $sorted->keyBy(fn (Participant $participant): string => (string) $participant->id),
+            );
         }
 
         $fillOrder = self::laneFillOrder($laneCount);
@@ -247,7 +270,13 @@ class GenerateEventHeats
 
             foreach ($taggedHeats as $heatEntries) {
                 $heat = $event->heats()->create(['heat_number' => ++$heatNumber]);
-                $this->createLanes($heat, $laneCount, $fillOrder, $heatEntries, false);
+                $this->createLanes(
+                    $heat,
+                    $laneCount,
+                    $fillOrder,
+                    $this->orderEntriesForLaneFill($heatEntries, $participantsById),
+                    false,
+                );
             }
 
             $seededEvents++;
@@ -255,6 +284,67 @@ class GenerateEventHeats
         }
 
         return ['events' => $seededEvents, 'heats' => $heats];
+    }
+
+    /**
+     * Slowest (and NT) first so early heats are slower and the final heat is fastest.
+     *
+     * @param  Collection<int, Participant>  $participants
+     * @return Collection<int, Participant>
+     */
+    private function sortParticipantsForSeeding(Collection $participants): Collection
+    {
+        return $participants
+            ->sort(function (Participant $left, Participant $right): int {
+                $leftTime = $left->seed_time_hundredths;
+                $rightTime = $right->seed_time_hundredths;
+
+                if ($leftTime === null && $rightTime === null) {
+                    return 0;
+                }
+
+                if ($leftTime === null) {
+                    return -1;
+                }
+
+                if ($rightTime === null) {
+                    return 1;
+                }
+
+                return $rightTime <=> $leftTime;
+            })
+            ->values();
+    }
+
+    /**
+     * Fastest first so centre-out lane fill puts the quickest seed in the middle.
+     *
+     * @param  list<array{id: string, entry_event_id: string}>  $entries
+     * @param  Collection<string, Participant>  $participantsById
+     * @return list<array{id: string, entry_event_id: string}>
+     */
+    private function orderEntriesForLaneFill(array $entries, Collection $participantsById): array
+    {
+        usort($entries, function (array $left, array $right) use ($participantsById): int {
+            $leftTime = $participantsById->get($left['id'])?->seed_time_hundredths;
+            $rightTime = $participantsById->get($right['id'])?->seed_time_hundredths;
+
+            if ($leftTime === null && $rightTime === null) {
+                return 0;
+            }
+
+            if ($leftTime === null) {
+                return 1;
+            }
+
+            if ($rightTime === null) {
+                return -1;
+            }
+
+            return $leftTime <=> $rightTime;
+        });
+
+        return $entries;
     }
 
     /**

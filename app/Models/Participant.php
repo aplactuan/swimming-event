@@ -24,6 +24,7 @@ use Illuminate\Database\Eloquent\Relations\BelongsToMany;
     'birthdate',
     'age',
     'paid',
+    'seed_time_hundredths',
 ])]
 #[ObservedBy([ParticipantObserver::class])]
 class Participant extends Model
@@ -132,6 +133,25 @@ class Participant extends Model
     }
 
     /**
+     * Get the seed time formatted as m:ss.hh, or null when unset.
+     */
+    public function getSeedTimeAttribute(): ?string
+    {
+        if ($this->seed_time_hundredths === null) {
+            return null;
+        }
+
+        $total = $this->seed_time_hundredths;
+
+        return sprintf(
+            '%d:%02d.%02d',
+            intdiv($total, 6000),
+            intdiv($total % 6000, 100),
+            $total % 100,
+        );
+    }
+
+    /**
      * Get the attributes that should be cast.
      *
      * @return array<string, string>
@@ -143,6 +163,7 @@ class Participant extends Model
             'birthdate' => 'date',
             'age' => 'integer',
             'paid' => 'boolean',
+            'seed_time_hundredths' => 'integer',
         ];
     }
 }

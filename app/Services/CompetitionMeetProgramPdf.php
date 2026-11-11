@@ -157,7 +157,7 @@ class CompetitionMeetProgramPdf
                 : 'Unknown',
             'age' => $participant !== null ? (string) $participant->age : '',
             'team' => $participant?->team?->name ?? '',
-            'seed' => 'NT',
+            'seed' => $participant?->seed_time ?? 'NT',
         ];
     }
 }
