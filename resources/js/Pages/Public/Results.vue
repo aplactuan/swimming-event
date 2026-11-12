@@ -40,6 +40,7 @@ defineProps<{
             :back-href="route('home')"
             back-label="Back to all results"
             event-show-route="public-results.show"
+            event-pdf-route="public-results.event-pdf"
             :standings-href="route('public-standings.index', competition.id)"
         />
     </PublicLayout>

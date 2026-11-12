@@ -4,10 +4,13 @@ namespace App\Http\Controllers;
 
 use App\Models\Competition;
 use App\Models\Event;
+use App\Services\CompetitionResultsPdf;
 use App\Services\EventResultSheet;
 use Illuminate\Http\RedirectResponse;
+use Illuminate\Http\Request;
 use Inertia\Inertia;
 use Inertia\Response;
+use Symfony\Component\HttpFoundation\Response as SymfonyResponse;
 
 class PublicResultController extends Controller
 {
@@ -78,5 +81,28 @@ class PublicResultController extends Controller
         abort_unless($competition->isClosed(), 404);
 
         return Inertia::render('Public/Results', $sheet->payload($competition, $event));
+    }
+
+    /**
+     * Download a public results PDF for one event, optionally filtered by age.
+     */
+    public function eventPdf(
+        Request $request,
+        Competition $competition,
+        Event $event,
+        CompetitionResultsPdf $resultsPdf,
+    ): SymfonyResponse {
+        abort_unless($competition->isClosed(), 404);
+
+        $validated = $request->validate([
+            'ages' => ['sometimes', 'array'],
+            'ages.*' => ['integer', 'min:0', 'max:120'],
+        ]);
+
+        return $resultsPdf->downloadEvent(
+            $competition,
+            $event,
+            $validated['ages'] ?? [],
+        );
     }
 }

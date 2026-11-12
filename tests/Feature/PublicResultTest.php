@@ -111,6 +111,43 @@ class PublicResultTest extends TestCase
                 ->where('entries.1.id', $slowest->id));
     }
 
+    public function test_public_event_results_pdf_can_be_downloaded_with_age_filter(): void
+    {
+        $competition = Competition::factory()->closed()->create([
+            'competition_date' => '2026-06-01',
+        ]);
+        $event = Event::factory()->create([
+            'competition_id' => $competition->id,
+            'name' => '25m Freestyle',
+        ]);
+        $heat = Heat::factory()->create(['event_id' => $event->id]);
+        $this->swimmer($heat, $competition, laneNumber: 1, hundredths: 2800, birthdate: '2022-01-01');
+        $this->swimmer($heat, $competition, laneNumber: 2, hundredths: 3000, birthdate: '2020-01-01');
+
+        $response = $this->get(route('public-results.event-pdf', [
+            'competition' => $competition,
+            'event' => $event,
+            'ages' => [4],
+        ]));
+
+        $response->assertOk();
+        $response->assertHeader('content-type', 'application/pdf');
+        $this->assertStringStartsWith('%PDF', $response->getContent());
+        $this->assertStringContainsString(
+            'ages-4',
+            strtolower((string) $response->headers->get('content-disposition')),
+        );
+    }
+
+    public function test_open_competition_event_pdf_is_not_public(): void
+    {
+        $competition = Competition::factory()->create();
+        $event = Event::factory()->create(['competition_id' => $competition->id]);
+
+        $this->get(route('public-results.event-pdf', [$competition, $event]))
+            ->assertNotFound();
+    }
+
     /**
      * Seat a swimmer in the heat with the given finish time.
      */
@@ -119,10 +156,12 @@ class PublicResultTest extends TestCase
         Competition $competition,
         int $laneNumber,
         ?int $hundredths,
+        ?string $birthdate = null,
     ): HeatLane {
-        $participant = Participant::factory()->paid()->create([
+        $participant = Participant::factory()->paid()->create(array_filter([
             'competition_id' => $competition->id,
-        ]);
+            'birthdate' => $birthdate,
+        ]));
 
         $lane = $heat->assignLane($laneNumber, $participant);
         $lane->forceFill(['finish_time_hundredths' => $hundredths])->save();

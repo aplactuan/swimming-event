@@ -59,4 +59,25 @@ class CompetitionResultController extends Controller
 
         return $resultsPdf->download($competition, $classification);
     }
+
+    /**
+     * Download a results PDF for one event, optionally filtered by age.
+     */
+    public function eventPdf(
+        Request $request,
+        Competition $competition,
+        Event $event,
+        CompetitionResultsPdf $resultsPdf,
+    ): SymfonyResponse {
+        $validated = $request->validate([
+            'ages' => ['sometimes', 'array'],
+            'ages.*' => ['integer', 'min:0', 'max:120'],
+        ]);
+
+        return $resultsPdf->downloadEvent(
+            $competition,
+            $event,
+            $validated['ages'] ?? [],
+        );
+    }
 }
