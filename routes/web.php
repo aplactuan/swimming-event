@@ -26,6 +26,8 @@ Route::get('/results/{competition}', [PublicResultController::class, 'index'])
     ->name('public-results.index');
 Route::get('/results/{competition}/standings', [PublicStandingController::class, 'index'])
     ->name('public-standings.index');
+Route::get('/results/{competition}/{event}/pdf', [PublicResultController::class, 'eventPdf'])
+    ->name('public-results.event-pdf');
 Route::get('/results/{competition}/{event}', [PublicResultController::class, 'show'])
     ->name('public-results.show');
 
@@ -52,6 +54,8 @@ Route::middleware(['auth', 'verified'])->group(function () {
         ->name('competition-program.pdf');
     Route::get('/competitions/{competition}/lane-cards-pdf', [CompetitionLaneCardsController::class, 'pdf'])
         ->name('competition-lane-cards.pdf');
+    Route::get('/competitions/{competition}/results/{event}/pdf', [CompetitionResultController::class, 'eventPdf'])
+        ->name('competition-results.event-pdf');
     Route::get('/competitions/{competition}/results/{event}', [CompetitionResultController::class, 'show'])
         ->name('competition-results.show');
     Route::get('/competitions/{competition}/standings', [CompetitionStandingController::class, 'index'])

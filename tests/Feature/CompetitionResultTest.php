@@ -217,6 +217,64 @@ class CompetitionResultTest extends TestCase
             ->assertNotFound();
     }
 
+    public function test_event_results_pdf_can_be_downloaded(): void
+    {
+        $competition = Competition::factory()->create(['competition_date' => '2026-06-01']);
+        $event = Event::factory()->create([
+            'competition_id' => $competition->id,
+            'name' => '25m Freestyle',
+        ]);
+        $heat = Heat::factory()->create(['event_id' => $event->id]);
+        $this->swimmer($heat, $competition, laneNumber: 1, hundredths: 2800, birthdate: '2020-01-01');
+
+        $response = $this
+            ->actingAs(User::factory()->create())
+            ->get(route('competition-results.event-pdf', [$competition, $event]));
+
+        $response->assertOk();
+        $response->assertHeader('content-type', 'application/pdf');
+        $this->assertStringStartsWith('%PDF', $response->getContent());
+        $this->assertStringContainsString(
+            '25m-freestyle',
+            strtolower((string) $response->headers->get('content-disposition')),
+        );
+    }
+
+    public function test_event_results_pdf_can_be_filtered_by_age(): void
+    {
+        $competition = Competition::factory()->create(['competition_date' => '2026-06-01']);
+        $event = Event::factory()->create([
+            'competition_id' => $competition->id,
+            'name' => '25m Freestyle',
+        ]);
+        $heat = Heat::factory()->create(['event_id' => $event->id]);
+        $this->swimmer($heat, $competition, laneNumber: 1, hundredths: 2800, birthdate: '2020-01-01');
+        $this->swimmer($heat, $competition, laneNumber: 2, hundredths: 3000, birthdate: '2022-01-01');
+
+        $response = $this
+            ->actingAs(User::factory()->create())
+            ->get(route('competition-results.event-pdf', [
+                'competition' => $competition,
+                'event' => $event,
+                'ages' => [4],
+            ]));
+
+        $response->assertOk();
+        $this->assertStringContainsString(
+            'ages-4',
+            strtolower((string) $response->headers->get('content-disposition')),
+        );
+    }
+
+    public function test_guests_cannot_download_staff_event_results_pdf(): void
+    {
+        $competition = Competition::factory()->create();
+        $event = Event::factory()->create(['competition_id' => $competition->id]);
+
+        $this->get(route('competition-results.event-pdf', [$competition, $event]))
+            ->assertRedirect(route('login'));
+    }
+
     /**
      * Seat a swimmer in the heat with the given finish time.
      */

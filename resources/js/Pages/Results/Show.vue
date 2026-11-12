@@ -40,6 +40,7 @@ defineProps<{
             :back-href="route('competitions.show', competition.id)"
             :back-label="`Back to ${competition.name}`"
             event-show-route="competition-results.show"
+            event-pdf-route="competition-results.event-pdf"
             :standings-href="route('competition-standings.index', competition.id)"
         />
     </AuthenticatedLayout>

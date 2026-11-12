@@ -52,6 +52,69 @@ class CompetitionResultsPdf
         })->all();
 
         $scopeLabel = $classification?->name ?? 'All events';
+
+        return $this->stream(
+            competition: $competition,
+            sections: $sections,
+            scopeLabel: $scopeLabel,
+            filenameSuffix: $classification !== null ? '-'.str($classification->name)->slug() : '',
+        );
+    }
+
+    /**
+     * Stream a results PDF for one event, optionally filtered to selected ages.
+     *
+     * @param  list<int>  $ages
+     */
+    public function downloadEvent(Competition $competition, Event $event, array $ages = []): Response
+    {
+        abort_unless($event->competition_id === $competition->id, 404);
+
+        $event->loadMissing(['eligibilities.classification', 'eligibilities.ageBracket']);
+
+        $ages = array_values(array_unique(array_map(
+            static fn (mixed $age): int => (int) $age,
+            $ages,
+        )));
+        sort($ages);
+
+        $scored = $this->scoring->scoreEvent($event, $competition);
+
+        if ($ages !== []) {
+            $scored = $scored
+                ->filter(function (array $row) use ($ages): bool {
+                    $participantAge = $row['lane']->participant?->age;
+
+                    return $participantAge !== null && in_array((int) $participantAge, $ages, true);
+                })
+                ->values();
+        }
+
+        $rows = $this->rowsForExport($scored, reRank: $ages !== []);
+        $scopeLabel = $ages === []
+            ? 'All ages in this event'
+            : 'Ages '.implode(', ', $ages);
+
+        return $this->stream(
+            competition: $competition,
+            sections: [[
+                'heading' => $this->eventHeading($event),
+                'rows' => $rows,
+            ]],
+            scopeLabel: $scopeLabel,
+            filenameSuffix: '-'.str($event->name)->slug().($ages !== [] ? '-ages-'.implode('-', $ages) : ''),
+        );
+    }
+
+    /**
+     * @param  list<array{heading: string, rows: list<array{place: string, name: string, age: string, team: string, time: string, points: string}>}>  $sections
+     */
+    private function stream(
+        Competition $competition,
+        array $sections,
+        string $scopeLabel,
+        string $filenameSuffix,
+    ): Response {
         $generatedAt = now()->format('g:i A  m/d/Y');
 
         $pdf = new ResultsBookPdf(
@@ -66,13 +129,44 @@ class CompetitionResultsPdf
         $filename = sprintf(
             '%s-results%s.pdf',
             str($competition->name)->slug(),
-            $classification !== null ? '-'.str($classification->name)->slug() : '',
+            $filenameSuffix,
         );
 
         return response($pdf->Output('S'), 200, [
             'Content-Type' => 'application/pdf',
             'Content-Disposition' => 'attachment; filename="'.$filename.'"',
         ]);
+    }
+
+    /**
+     * @param  \Illuminate\Support\Collection<int, array{lane: HeatLane, place: int|null, points: float|null, status: string}>  $scored
+     * @return list<array{place: string, name: string, age: string, team: string, time: string, points: string}>
+     */
+    private function rowsForExport($scored, bool $reRank): array
+    {
+        $place = 0;
+
+        return $scored->map(function (array $row) use ($reRank, &$place): array {
+            $payload = $this->rowPayload($row);
+
+            if (! $reRank) {
+                return $payload;
+            }
+
+            $lane = $row['lane'];
+            $isNs = $lane->status === HeatLaneStatus::Ns || $row['status'] === HeatLaneStatus::Ns->value;
+
+            if ($isNs || $lane->finish_time_hundredths === null) {
+                $payload['place'] = '---';
+
+                return $payload;
+            }
+
+            $place++;
+            $payload['place'] = (string) $place;
+
+            return $payload;
+        })->all();
     }
 
     private function eventHeading(Event $event): string

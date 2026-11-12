@@ -27,6 +27,7 @@ const props = defineProps<{
     backHref: string;
     backLabel: string;
     eventShowRoute: string;
+    eventPdfRoute?: string;
     standingsHref?: string;
 }>();
 
@@ -139,6 +140,23 @@ const timedCount = computed(
             (entry) => entry.status !== 'ns' && entry.finish_time_hundredths !== null,
         ).length,
 );
+
+const exportPdfHref = computed(() => {
+    if (! props.event || ! props.eventPdfRoute) {
+        return null;
+    }
+
+    const params: Record<string, string | number | number[]> = {
+        competition: props.competition.id,
+        event: props.event.id,
+    };
+
+    if (selectedAges.value.length > 0) {
+        params.ages = [...selectedAges.value].sort((a, b) => a - b);
+    }
+
+    return route(props.eventPdfRoute, params);
+});
 
 const entryName = (entry: EventResultEntry): string => {
     if (entry.participant) {
@@ -450,13 +468,22 @@ watch(
         </div>
 
         <div class="sm-card">
-            <div>
-                <div class="sm-label">Results</div>
-                <h3 class="mt-1 text-xl font-semibold text-ink">Fastest first</h3>
-                <p v-if="event" class="mt-1 text-sm text-ink-muted">
-                    {{ timedCount }} of {{ filteredEntries.length }}
-                    {{ isRelay ? 'teams' : 'swimmers' }} have a recorded time.
-                </p>
+            <div class="flex flex-wrap items-start justify-between gap-3">
+                <div>
+                    <div class="sm-label">Results</div>
+                    <h3 class="mt-1 text-xl font-semibold text-ink">Fastest first</h3>
+                    <p v-if="event" class="mt-1 text-sm text-ink-muted">
+                        {{ timedCount }} of {{ filteredEntries.length }}
+                        {{ isRelay ? 'teams' : 'swimmers' }} have a recorded time.
+                    </p>
+                </div>
+                <a
+                    v-if="exportPdfHref"
+                    :href="exportPdfHref"
+                    class="sm-btn-secondary justify-center sm:shrink-0"
+                >
+                    Export PDF
+                </a>
             </div>
 
             <div
